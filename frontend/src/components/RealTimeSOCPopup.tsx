@@ -25,26 +25,7 @@ interface RealTimeSOCPopupProps {
 export const RealTimeSOCPopup = ({ isOpen, onClose, response, isLoading }: RealTimeSOCPopupProps) => {
   const [executedSteps, setExecutedSteps] = useState<Set<number>>(new Set());
   const [executingStep, setExecutingStep] = useState<number | null>(null);
-  const [autoCloseTimer, setAutoCloseTimer] = useState<number>(0);
 
-  // Auto-close timer (optional - can be disabled)
-  useEffect(() => {
-    if (isOpen && response && !isLoading) {
-      const timer = setInterval(() => {
-        setAutoCloseTimer(prev => {
-          if (prev >= 300) { // 5 minutes
-            onClose();
-            return 0;
-          }
-          return prev + 1;
-        });
-      }, 1000);
-
-      return () => clearInterval(timer);
-    } else {
-      setAutoCloseTimer(0);
-    }
-  }, [isOpen, response, isLoading, onClose]);
 
   const executeStep = async (step: SOCStep, index: number) => {
     if (!step.commands.windows) {
@@ -103,21 +84,21 @@ export const RealTimeSOCPopup = ({ isOpen, onClose, response, isLoading }: RealT
   if (isLoading) {
     return (
       <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="max-w-2xl border-red-500 border-2">
+        <DialogContent className="max-w-2xl border-primary border-2 border-glow bg-background/95 backdrop-blur">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-red-600">
-              <Zap className="h-5 w-5 animate-pulse" />
+            <DialogTitle className="flex items-center gap-2 font-orbitron font-black text-glow-primary">
+              <Zap className="h-5 w-5 animate-pulse-glow text-primary" />
               🚨 SOC ANALYST ACTIVATED
             </DialogTitle>
-            <DialogDescription className="text-red-600">
+            <DialogDescription className="text-glow-accent font-space font-medium">
               Real-time attack detected! Analyzing threat and preparing immediate response...
             </DialogDescription>
           </DialogHeader>
           <div className="flex flex-col items-center justify-center py-8 space-y-4">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-500"></div>
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary border-glow animate-pulse-glow"></div>
             <div className="text-center">
-              <p className="font-medium">Analyzing attack patterns...</p>
-              <p className="text-sm text-muted-foreground">Generating response plan...</p>
+              <p className="font-orbitron font-medium text-glow-primary">Analyzing attack patterns...</p>
+              <p className="text-sm text-muted-foreground font-space">Generating response plan...</p>
             </div>
           </div>
         </DialogContent>
@@ -133,32 +114,30 @@ export const RealTimeSOCPopup = ({ isOpen, onClose, response, isLoading }: RealT
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-5xl max-h-[95vh] border-red-500 border-2">
+      <DialogContent className="max-w-4xl max-h-[90vh] border-primary border-2 border-glow overflow-hidden flex flex-col bg-background/95 backdrop-blur">
         <DialogHeader>
           <DialogTitle className="flex items-center justify-between">
-            <div className="flex items-center gap-2 text-red-600">
-              <Zap className="h-5 w-5" />
+            <div className="flex items-center gap-2 font-orbitron font-black text-glow-primary">
+              <Zap className="h-5 w-5 animate-pulse-glow text-primary" />
               🚨 IMMEDIATE SOC RESPONSE REQUIRED
             </div>
-            <div className="text-sm text-muted-foreground">
-              Auto-close in {Math.max(0, 300 - autoCloseTimer)}s
-            </div>
           </DialogTitle>
-          <DialogDescription className="text-red-600 font-medium">
+          <DialogDescription className="text-glow-accent font-space font-semibold">
             ACTIVE ATTACK DETECTED - Execute these steps immediately to stop the threat
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4">
-          {/* Threat Classification */}
-          <Card className="border-red-200 bg-red-50">
+        <ScrollArea className="flex-1 pr-4">
+          <div className="space-y-4">
+            {/* Threat Classification */}
+          <Card className="border-glow bg-card/50 backdrop-blur">
             <CardContent className="pt-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   {getSeverityIcon(response.classification)}
-                  <span className="font-bold text-red-800">THREAT IDENTIFIED:</span>
+                  <span className="font-orbitron font-black text-glow-primary text-lg">⚠️ THREAT IDENTIFIED:</span>
                 </div>
-                <Badge variant={getSeverityColor(response.classification)} className="text-lg px-3 py-1">
+                <Badge variant={getSeverityColor(response.classification)} className="text-lg px-4 py-2 font-orbitron font-bold border-glow animate-pulse-glow">
                   {response.classification}
                 </Badge>
               </div>
@@ -166,11 +145,11 @@ export const RealTimeSOCPopup = ({ isOpen, onClose, response, isLoading }: RealT
           </Card>
 
           {/* Progress Bar */}
-          <Card>
+          <Card className="border-glow bg-card/50 backdrop-blur">
             <CardContent className="pt-4">
               <div className="flex items-center justify-between mb-2">
-                <span className="font-medium">Response Progress</span>
-                <span className="text-sm text-muted-foreground">
+                <span className="font-orbitron font-bold text-glow-accent">📊 Response Progress</span>
+                <span className="text-sm font-space font-medium text-muted-foreground">
                   {completedSteps}/{totalSteps} steps completed
                 </span>
               </div>
@@ -182,14 +161,15 @@ export const RealTimeSOCPopup = ({ isOpen, onClose, response, isLoading }: RealT
           <div className="flex gap-2">
             <Button 
               onClick={executeAllSteps}
-              className="flex-1 bg-red-600 hover:bg-red-700"
+              className="flex-1 bg-primary hover:bg-primary/80 font-orbitron font-bold border-glow animate-pulse-glow"
               disabled={completedSteps === totalSteps}
             >
-              <Zap className="h-4 w-4 mr-2" />
-              Execute All Steps
+              <Zap className="h-4 w-4 mr-2 animate-pulse-glow" />
+              ⚡ Execute All Steps
             </Button>
             <Button 
               variant="outline" 
+              className="border-glow hover:bg-secondary/20 font-orbitron font-semibold"
               onClick={() => {
                 const allCommands = response.steps
                   .filter(step => step.commands.windows)
@@ -200,19 +180,19 @@ export const RealTimeSOCPopup = ({ isOpen, onClose, response, isLoading }: RealT
               }}
             >
               <Copy className="h-4 w-4 mr-2" />
-              Copy All
+              📋 Copy All
             </Button>
           </div>
 
           {/* Response Steps */}
-          <Card>
+          <Card className="border-glow bg-card/50 backdrop-blur">
             <CardContent className="pt-4">
               <div className="flex items-center gap-2 mb-4">
-                <Terminal className="h-4 w-4" />
-                <span className="font-bold text-red-800">IMMEDIATE ACTIONS REQUIRED</span>
+                <Terminal className="h-5 w-5 text-primary animate-pulse-glow" />
+                <span className="font-orbitron font-black text-glow-primary text-lg">🚨 IMMEDIATE ACTIONS REQUIRED</span>
               </div>
               
-              <ScrollArea className="h-[400px] pr-4">
+              <ScrollArea className="h-[300px] pr-4">
                 <div className="space-y-3">
                   {response.steps.map((step, index) => {
                     const isExecuted = executedSteps.has(index);
@@ -222,20 +202,20 @@ export const RealTimeSOCPopup = ({ isOpen, onClose, response, isLoading }: RealT
                     return (
                       <Card 
                         key={index} 
-                        className={`transition-all ${
-                          isExecuted ? 'bg-green-50 border-green-200' : 
-                          isUrgent ? 'bg-red-50 border-red-200' : 
-                          'bg-yellow-50 border-yellow-200'
+                        className={`transition-all border-glow ${
+                          isExecuted ? 'bg-success/10 border-success animate-pulse-glow' : 
+                          isUrgent ? 'bg-destructive/10 border-destructive animate-pulse-glow' : 
+                          'bg-warning/10 border-warning'
                         }`}
                       >
                         <CardContent className="pt-4">
                           <div className="flex items-start justify-between gap-4">
                             <div className="flex-1 space-y-2">
                               <div className="flex items-center gap-2">
-                                <Badge variant={isUrgent ? "destructive" : "default"} className="text-xs">
+                                <Badge variant={isUrgent ? "destructive" : "default"} className="text-xs font-orbitron font-bold border-glow">
                                   STEP {index + 1}
                                 </Badge>
-                                <span className="font-bold text-sm">
+                                <span className="font-orbitron font-bold text-sm text-glow-accent">
                                   {step.title}
                                 </span>
                                 {isExecuted && (
@@ -247,18 +227,18 @@ export const RealTimeSOCPopup = ({ isOpen, onClose, response, isLoading }: RealT
                                 </div>
                               </div>
                               
-                              <p className="text-sm font-medium">
+                              <p className="text-sm font-space font-medium text-foreground">
                                 {step.description}
                               </p>
                               
-                              <p className="text-xs text-blue-700 bg-blue-100 px-2 py-1 rounded">
-                                <strong>Why:</strong> {step.why}
+                              <p className="text-xs font-space text-muted-foreground bg-muted/50 px-3 py-2 rounded-md border-glow">
+                                <strong>💡 Why:</strong> {step.why}
                               </p>
                               
                               {step.commands.windows && (
-                                <div className="bg-gray-900 text-green-400 p-3 rounded font-mono text-xs overflow-x-auto">
-                                  <div className="text-gray-400 mb-1"># PowerShell Command:</div>
-                                  {step.commands.windows}
+                                <div className="bg-background border-glow p-3 rounded-lg font-mono text-xs overflow-x-auto">
+                                  <div className="text-muted-foreground mb-1 font-space">💻 PowerShell Command:</div>
+                                  <div className="text-glow-primary font-mono">{step.commands.windows}</div>
                                 </div>
                               )}
                             </div>
@@ -290,30 +270,28 @@ export const RealTimeSOCPopup = ({ isOpen, onClose, response, isLoading }: RealT
 
           {/* Notes */}
           {response.notes && (
-            <Card className="border-blue-200 bg-blue-50">
+            <Card className="border-glow bg-card/50 backdrop-blur">
               <CardContent className="pt-4">
-                <div className="text-sm">
-                  <strong className="text-blue-800">SOC Notes:</strong> {response.notes}
+                <div className="text-sm font-space">
+                  <strong className="text-glow-accent font-orbitron">📝 SOC Notes:</strong> <span className="text-muted-foreground">{response.notes}</span>
                 </div>
               </CardContent>
             </Card>
           )}
 
           {/* Footer Actions */}
-          <div className="flex justify-between items-center pt-4 border-t">
-            <div className="text-xs text-muted-foreground">
+          <div className="flex justify-between items-center pt-4 border-t border-glow">
+            <div className="text-xs text-muted-foreground font-space font-medium">
               💡 Commands are copied to clipboard - paste and run in PowerShell as Administrator
             </div>
             <div className="flex gap-2">
-              <Button variant="outline" onClick={() => setAutoCloseTimer(300)}>
-                Disable Auto-Close
-              </Button>
-              <Button variant="outline" onClick={onClose}>
-                Close (Keep Monitoring)
+              <Button variant="outline" className="border-glow hover:bg-secondary/20 font-orbitron" onClick={onClose}>
+                ✅ Close (Keep Monitoring)
               </Button>
             </div>
           </div>
         </div>
+        </ScrollArea>
       </DialogContent>
     </Dialog>
   );

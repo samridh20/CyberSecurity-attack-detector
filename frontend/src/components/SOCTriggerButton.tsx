@@ -11,23 +11,7 @@ export const SOCTriggerButton = ({ alerts }: SOCTriggerButtonProps) => {
   const { manualAnalysis } = useRealTimeSOC(alerts);
 
   const triggerSOCDemo = () => {
-    // Create a fake high-confidence reconnaissance alert to trigger SOC
-    const fakeAlert: Alert = {
-      id: `demo-${Date.now()}`,
-      ts: Date.now() / 1000,
-      src: "192.168.1.100",
-      dst: "192.168.1.1", 
-      class: "Reconnaissance",
-      prob: 0.85,
-      extra: {
-        pkt_len: 64,
-        iface: "eth0",
-        protocol: "tcp",
-        flags: "SYN"
-      }
-    };
-
-    // Trigger manual analysis
+    // Trigger manual analysis with reconnaissance attack
     manualAnalysis("Reconnaissance");
   };
 

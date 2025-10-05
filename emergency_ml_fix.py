@@ -134,24 +134,25 @@ class EmergencyMLSystem:
                 ip_flags=random.randint(0, 7)
             )
         
-        else:  # Generic
-            # Generic anomalous traffic
+        else:  # Fuzzers (fallback)
+            # Fuzzing characteristics as fallback
+            random_payload = bytes([random.randint(0, 255) for _ in range(random.randint(100, 1000))])
             packet = PacketInfo(
                 timestamp=time.time(),
                 src_ip=src_ip,
                 dst_ip=dst_ip,
-                src_port=random.randint(30000, 65535),  # High port
+                src_port=random.randint(1024, 65535),
                 dst_port=dst_port,
-                protocol="udp",
-                packet_size=random.randint(1400, 1500),  # Large packets
-                payload_size=random.randint(1000, 1400),
-                payload=b"X" * random.randint(1000, 1400),
-                tcp_flags=None,
-                tcp_window=None,
-                tcp_seq=None,
-                tcp_ack=None,
-                ttl=1,  # Suspicious TTL
-                ip_flags=0
+                protocol="tcp",
+                packet_size=len(random_payload) + 64,
+                payload_size=len(random_payload),
+                payload=random_payload,
+                tcp_flags=random.randint(0, 255),  # Random flags
+                tcp_window=random.randint(0, 65535),
+                tcp_seq=random.randint(1000, 100000),
+                tcp_ack=random.randint(1000, 100000),
+                ttl=random.randint(1, 255),
+                ip_flags=random.randint(0, 7)
             )
         
         return packet
@@ -244,8 +245,7 @@ class EmergencyMLSystem:
             {"type": "Reconnaissance", "src": "192.168.1.100", "ports": [21, 22, 80, 443, 3389]},
             {"type": "DoS", "src": "10.0.0.50", "ports": [80]},
             {"type": "Exploits", "src": "203.0.113.100", "ports": [80, 443, 21]},
-            {"type": "Fuzzers", "src": "172.16.1.200", "ports": [80, 22]},
-            {"type": "Generic", "src": "192.168.2.150", "ports": [8080, 9000]}
+            {"type": "Fuzzers", "src": "172.16.1.200", "ports": [80, 22]}
         ]
         
         start_time = time.time()

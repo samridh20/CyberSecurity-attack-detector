@@ -298,7 +298,7 @@ class SimpleModelAdapter:
     def __init__(self):
         """Initialize simple model adapter."""
         self.binary_threshold = 0.5  # Normal threshold
-        self.class_names = ['Normal', 'DoS', 'Exploits', 'Fuzzers', 'Generic', 'Reconnaissance']
+        self.class_names = ['Normal', 'DoS', 'Exploits', 'Fuzzers', 'Reconnaissance']
         
         # Track flow statistics for better detection
         self.flow_stats = {}
@@ -447,7 +447,7 @@ class SimpleModelAdapter:
             elif flow_key.protocol == "icmp":
                 attack_class = "DoS"
             else:
-                attack_class = "Generic"
+                attack_class = "Fuzzers"  # Changed from Generic to Fuzzers
             
             # Create realistic probabilities
             class_probabilities = {name: 0.05 for name in self.class_names}

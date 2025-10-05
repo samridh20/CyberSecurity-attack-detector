@@ -72,18 +72,18 @@ export const SOCPopup = ({ isOpen, onClose, response, isLoading }: SOCPopupProps
   if (isLoading) {
     return (
       <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-2xl border-glow bg-background/95 backdrop-blur">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Shield className="h-5 w-5 animate-pulse" />
+            <DialogTitle className="flex items-center gap-2 font-orbitron font-black text-glow-primary">
+              <Shield className="h-5 w-5 animate-pulse-glow text-primary" />
               Analyzing Attack...
             </DialogTitle>
-            <DialogDescription>
+            <DialogDescription className="font-space text-muted-foreground">
               SOC Assistant is analyzing the detected attack and preparing response steps.
             </DialogDescription>
           </DialogHeader>
           <div className="flex items-center justify-center py-8">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary border-glow animate-pulse-glow"></div>
           </div>
         </DialogContent>
       </Dialog>
@@ -94,25 +94,25 @@ export const SOCPopup = ({ isOpen, onClose, response, isLoading }: SOCPopupProps
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh]">
+      <DialogContent className="max-w-4xl max-h-[90vh] border-glow bg-background/95 backdrop-blur">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Shield className="h-5 w-5 text-primary" />
+          <DialogTitle className="flex items-center gap-2 font-orbitron font-black text-glow-primary">
+            <Shield className="h-5 w-5 text-primary animate-pulse-glow" />
             SOC Response - Attack Detected
           </DialogTitle>
-          <DialogDescription>
+          <DialogDescription className="font-space text-muted-foreground">
             Immediate response plan for the detected security incident
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4">
           {/* Classification */}
-          <Card>
+          <Card className="border-glow bg-card/50 backdrop-blur">
             <CardContent className="pt-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <AlertTriangle className="h-4 w-4" />
-                  <span className="font-medium">Classification:</span>
+                  <AlertTriangle className="h-4 w-4 text-primary" />
+                  <span className="font-orbitron font-medium text-glow-accent">Classification:</span>
                 </div>
                 <div className="flex gap-2">
                   <Badge variant={getSeverityColor(response.classification)}>
@@ -127,11 +127,11 @@ export const SOCPopup = ({ isOpen, onClose, response, isLoading }: SOCPopupProps
           </Card>
 
           {/* Response Steps */}
-          <Card>
+          <Card className="border-glow bg-card/50 backdrop-blur">
             <CardContent className="pt-4">
               <div className="flex items-center gap-2 mb-4">
-                <Terminal className="h-4 w-4" />
-                <span className="font-medium">Response Steps ({response.steps.length})</span>
+                <Terminal className="h-4 w-4 text-primary animate-pulse-glow" />
+                <span className="font-orbitron font-medium text-glow-accent">Response Steps ({response.steps.length})</span>
               </div>
               
               <ScrollArea className="h-[400px] pr-4">
@@ -160,7 +160,7 @@ export const SOCPopup = ({ isOpen, onClose, response, isLoading }: SOCPopupProps
                               {step.description}
                             </p>
                             
-                            <p className="text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded">
+                            <p className="text-xs text-gray-800 bg-gray-100 px-2 py-1 rounded">
                               Why: {step.why}
                             </p>
                             
