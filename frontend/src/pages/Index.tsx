@@ -80,6 +80,7 @@ const Index = () => {
             isCapturing={isCapturing}
             alertsHistory={alertsHistory}
             classDistribution={classDistribution}
+            alerts={alerts}
           />
         </TabsContent>
 

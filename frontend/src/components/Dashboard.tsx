@@ -1,17 +1,25 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Activity, Shield, Clock, AlertTriangle } from "lucide-react";
-import { Stats } from "@/types/alert";
+import { Stats, Alert } from "@/types/alert";
 import { AlertsChart } from "./AlertsChart";
 import { ClassDistribution } from "./ClassDistribution";
+import { SOCTestPanel } from "./SOCTestPanel";
+import { RealTimeSOCPopup } from "./RealTimeSOCPopup";
+import { useRealTimeSOC } from "@/hooks/useRealTimeSOC";
+import { SOCTriggerButton } from "./SOCTriggerButton";
 
 interface DashboardProps {
   stats: Stats;
   isCapturing: boolean;
   alertsHistory: Array<{ time: number; count: number }>;
   classDistribution: Array<{ name: string; count: number }>;
+  alerts: Alert[];
 }
 
-export const Dashboard = ({ stats, isCapturing, alertsHistory, classDistribution }: DashboardProps) => {
+export const Dashboard = ({ stats, isCapturing, alertsHistory, classDistribution, alerts }: DashboardProps) => {
+  // Real-time SOC integration - automatically triggers on new attacks
+  const { isAnalyzing, socResponse, isPopupOpen, closePopup } = useRealTimeSOC(alerts);
+
   const formatTime = (timestamp: number | null) => {
     if (!timestamp) return "No alerts yet";
     return new Date(timestamp).toLocaleTimeString();
@@ -87,6 +95,22 @@ export const Dashboard = ({ stats, isCapturing, alertsHistory, classDistribution
         <AlertsChart data={alertsHistory} />
         <ClassDistribution data={classDistribution} />
       </div>
+
+      {/* SOC Test Panel */}
+      <SOCTestPanel />
+
+      {/* Real-Time SOC Demo Trigger */}
+      <div className="flex justify-center">
+        <SOCTriggerButton alerts={alerts} />
+      </div>
+
+      {/* Real-Time SOC Popup */}
+      <RealTimeSOCPopup
+        isOpen={isPopupOpen}
+        onClose={closePopup}
+        response={socResponse}
+        isLoading={isAnalyzing}
+      />
     </div>
   );
 };
