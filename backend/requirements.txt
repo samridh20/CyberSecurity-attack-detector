@@ -19,6 +19,11 @@ loguru>=0.7.0
 # Optional performance optimization
 numba>=0.58.0
 
+# API Server
+fastapi>=0.104.0
+uvicorn>=0.24.0
+psutil>=5.9.0
+
 # Testing
 pytest>=7.0.0
 pytest-cov>=4.0.0

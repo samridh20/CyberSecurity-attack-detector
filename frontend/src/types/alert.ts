@@ -28,3 +28,29 @@ export interface Stats {
   topClasses: Array<{ name: string; count: number }>;
   lastAlertTime: number | null;
 }
+
+// Backend API types
+export interface BackendAlert {
+  id: string;
+  timestamp: number;
+  src_ip: string;
+  dst_ip: string;
+  attack_class: string;
+  probability: number;
+  packet_length?: number;
+  interface?: string;
+  protocol?: string;
+  flags?: string;
+}
+
+export interface BackendStats {
+  pps: number;
+  alerts_per_sec: number;
+  last_alert_ts: number | null;
+  logfile_path: string | null;
+  packets_processed: number;
+  alerts_generated: number;
+  active_flows: number;
+  uptime_seconds: number;
+  status: string;
+}

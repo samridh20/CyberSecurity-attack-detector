@@ -292,96 +292,209 @@ class MATLABModelAdapter:
 class SimpleModelAdapter:
     """
     Simplified model adapter for testing without MATLAB models.
-    Uses basic heuristics for demonstration.
+    Uses realistic heuristics to detect common attack patterns.
     """
     
     def __init__(self):
         """Initialize simple model adapter."""
-        self.binary_threshold = 0.3  # Lower threshold for more sensitive detection
+        self.binary_threshold = 0.5  # Normal threshold
         self.class_names = ['Normal', 'DoS', 'Exploits', 'Fuzzers', 'Generic', 'Reconnaissance']
         
-        logger.info("Simple model adapter initialized (for testing)")
+        # Track flow statistics for better detection
+        self.flow_stats = {}
+        self.packet_count = 0
+        
+        logger.info("Simple model adapter initialized")
     
     def predict(self, feature_vector: FeatureVector) -> ModelPrediction:
         """
-        Simple heuristic-based prediction for testing.
+        Enhanced heuristic-based prediction for real attack detection.
         
         Args:
             feature_vector: Input features
             
         Returns:
-            ModelPrediction based on simple heuristics
+            ModelPrediction based on realistic attack detection heuristics
         """
         start_time = time.time()
+        self.packet_count += 1
         
-        # Simple heuristics for demonstration
+        # Initialize attack score
         attack_score = 0.0
+        attack_class = "Normal"
         
-        # High packet rate suggests potential attack
-        if feature_vector.packets_per_second > 100:
+        # Get flow key for tracking
+        flow_key = feature_vector.flow_key
+        flow_id = f"{flow_key.src_ip}:{flow_key.src_port}->{flow_key.dst_ip}:{flow_key.dst_port}"
+        
+        # Track flow statistics
+        if flow_id not in self.flow_stats:
+            self.flow_stats[flow_id] = {
+                'packet_count': 0,
+                'first_seen': feature_vector.timestamp,
+                'last_seen': feature_vector.timestamp,
+                'total_bytes': 0
+            }
+        
+        flow_stat = self.flow_stats[flow_id]
+        flow_stat['packet_count'] += 1
+        flow_stat['last_seen'] = feature_vector.timestamp
+        flow_stat['total_bytes'] += feature_vector.packet_size
+        
+        # Calculate flow duration and rate
+        flow_duration = max(0.1, flow_stat['last_seen'] - flow_stat['first_seen'])
+        flow_pps = flow_stat['packet_count'] / flow_duration
+        
+        # === PORT SCAN DETECTION ===
+        # Multiple connections to different ports from same source
+        src_flows = [f for f in self.flow_stats.keys() if f.startswith(f"{flow_key.src_ip}:")]
+        unique_dst_ports = set()
+        for f in src_flows:
+            try:
+                dst_port = int(f.split("->")[1].split(":")[1])
+                unique_dst_ports.add(dst_port)
+            except:
+                pass
+        
+        if len(unique_dst_ports) > 5:  # Scanning multiple ports
+            attack_score += 0.6
+            attack_class = "Reconnaissance"
+            logger.debug(f"Port scan detected: {len(unique_dst_ports)} ports from {flow_key.src_ip}")
+        
+        # === SYN FLOOD / DoS DETECTION ===
+        # High packet rate to same destination
+        if flow_pps > 10:  # More than 10 packets per second
+            attack_score += 0.4
+            if flow_pps > 50:  # Very high rate
+                attack_score += 0.4
+                attack_class = "DoS"
+                logger.debug(f"High rate detected: {flow_pps:.1f} pps to {flow_key.dst_ip}:{flow_key.dst_port}")
+        
+        # === UNUSUAL PORT DETECTION ===
+        # Connections to uncommon ports
+        common_ports = {21, 22, 23, 25, 53, 80, 110, 143, 443, 993, 995, 3389}
+        if flow_key.dst_port not in common_ports:
+            attack_score += 0.2
+            if flow_key.dst_port > 1024:  # High port numbers
+                attack_score += 0.1
+        
+        # === PACKET SIZE ANOMALIES ===
+        # Very small or very large packets
+        if feature_vector.packet_size < 64:  # Tiny packets
+            attack_score += 0.2
+        elif feature_vector.packet_size > 1400:  # Large packets
+            attack_score += 0.2
+        
+        # === PROTOCOL ANOMALIES ===
+        # ICMP traffic (often used in attacks)
+        if flow_key.protocol == "icmp":
             attack_score += 0.3
+            attack_class = "DoS"  # ICMP floods
         
-        # Unusual packet sizes
-        if feature_vector.packet_size > 1400 or feature_vector.packet_size < 64:
+        # === PAYLOAD ANALYSIS ===
+        # High entropy suggests encrypted/compressed malicious payload
+        if hasattr(feature_vector, 'payload_entropy') and feature_vector.payload_entropy > 7.5:
+            attack_score += 0.3
+            attack_class = "Exploits"
+        
+        # === BURST DETECTION ===
+        # Sudden bursts of traffic
+        if hasattr(feature_vector, 'burstiness') and feature_vector.burstiness > 2.0:
             attack_score += 0.2
         
-        # High entropy payload (encrypted/compressed data)
-        if feature_vector.payload_entropy > 7.5:
-            attack_score += 0.2
+        # === TIME-BASED PATTERNS ===
+        # Multiple rapid connections (connection flooding)
+        recent_flows = [f for f, stats in self.flow_stats.items() 
+                       if (feature_vector.timestamp - stats['first_seen']) < 10.0]  # Last 10 seconds
         
-        # Unusual port combinations
-        if feature_vector.flow_key.dst_port not in [80, 443, 53, 22, 21]:
-            attack_score += 0.1
+        if len(recent_flows) > 20:  # Many flows in short time
+            attack_score += 0.4
+            attack_class = "DoS"
         
-        # High burstiness
-        if feature_vector.burstiness > 2.0:
-            attack_score += 0.2
+        # === SPECIFIC ATTACK SIGNATURES ===
+        # TCP SYN without follow-up (SYN flood indicator)
+        if (flow_key.protocol == "tcp" and 
+            hasattr(feature_vector, 'tcp_flags') and 
+            feature_vector.tcp_flags and 
+            'S' in str(feature_vector.tcp_flags) and 
+            flow_stat['packet_count'] == 1):  # Only SYN, no response
+            attack_score += 0.3
+            attack_class = "DoS"
         
-        # Add some randomness for demonstration
-        import random
-        attack_score += random.uniform(-0.1, 0.1)
+        # === BASELINE NOISE ===
+        # Add some baseline variation to make it more realistic
+        # But make it deterministic based on flow characteristics
+        flow_hash = hash((flow_key.src_ip, flow_key.dst_ip, flow_key.src_port, flow_key.dst_port))
+        baseline_noise = (flow_hash % 100) / 1000.0  # 0.0 to 0.1
+        attack_score += baseline_noise
         
+        # === FINAL SCORING ===
         # Clamp to [0, 1]
         attack_prob = max(0.0, min(1.0, attack_score))
         is_attack = attack_prob > self.binary_threshold
         
-        # Simple multiclass assignment
-        attack_class = None
+        # Enhanced multiclass classification
         class_probabilities = None
-        
         if is_attack:
-            if feature_vector.packets_per_second > 200:
+            # Determine attack type based on characteristics
+            if len(unique_dst_ports) > 5:
+                attack_class = "Reconnaissance"
+            elif flow_pps > 50 or len(recent_flows) > 20:
                 attack_class = "DoS"
-            elif feature_vector.payload_entropy > 7.8:
+            elif (hasattr(feature_vector, 'payload_entropy') and 
+                  feature_vector.payload_entropy > 7.5):
                 attack_class = "Exploits"
-            elif feature_vector.burstiness > 3.0:
-                attack_class = "Fuzzers"
+            elif flow_key.protocol == "icmp":
+                attack_class = "DoS"
             else:
                 attack_class = "Generic"
             
-            # Create dummy probabilities
-            class_probabilities = {name: 0.1 for name in self.class_names}
-            class_probabilities[attack_class] = 0.6
-            class_probabilities['Normal'] = 0.0
+            # Create realistic probabilities
+            class_probabilities = {name: 0.05 for name in self.class_names}
+            class_probabilities[attack_class] = max(0.6, attack_prob)
+            class_probabilities['Normal'] = 1.0 - attack_prob
+            
+            # Log detected attacks for debugging
+            if attack_prob > 0.5:
+                logger.info(f"ATTACK DETECTED: {attack_class} ({attack_prob:.2f}) - "
+                          f"{flow_key.src_ip}:{flow_key.src_port} -> "
+                          f"{flow_key.dst_ip}:{flow_key.dst_port} "
+                          f"(rate: {flow_pps:.1f} pps, ports: {len(unique_dst_ports)})")
         
         processing_time = (time.time() - start_time) * 1000
+        
+        # Clean up old flow stats periodically
+        if self.packet_count % 1000 == 0:
+            self._cleanup_old_flows(feature_vector.timestamp)
         
         return ModelPrediction(
             timestamp=feature_vector.timestamp,
             flow_key=feature_vector.flow_key,
             is_attack=is_attack,
             attack_probability=attack_prob,
-            attack_class=attack_class,
+            attack_class=attack_class if is_attack else None,
             class_probabilities=class_probabilities,
-            model_version="simple-1.0",
+            model_version="enhanced-simple-1.0",
             threshold_used=self.binary_threshold,
             processing_time_ms=processing_time
         )
     
+    def _cleanup_old_flows(self, current_time: float):
+        """Clean up old flow statistics to prevent memory bloat."""
+        cutoff_time = current_time - 300.0  # Keep last 5 minutes
+        old_flows = [flow_id for flow_id, stats in self.flow_stats.items() 
+                    if stats['last_seen'] < cutoff_time]
+        
+        for flow_id in old_flows:
+            del self.flow_stats[flow_id]
+        
+        if old_flows:
+            logger.debug(f"Cleaned up {len(old_flows)} old flows")
+    
     def set_threshold(self, threshold: float):
         """Update binary classification threshold."""
         self.binary_threshold = max(0.0, min(1.0, threshold))
-        logger.info(f"Simple model threshold updated to {self.binary_threshold}")
+        logger.info(f"Enhanced model threshold updated to {self.binary_threshold}")
 
 # Use SimpleModelAdapter as default for now
 # ModelAdapter = MATLABModelAdapter  # Uncomment when MATLAB loading is fixed

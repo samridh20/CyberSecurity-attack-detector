@@ -123,7 +123,14 @@ class TestAlertManager:
         # Medium severity
         medium_prediction = self.create_test_prediction(
             attack_class='Reconnaissance',
-            attack_probability=0.8
+            attack_probability=0.8,
+            flow_key=FlowKey(
+                src_ip='192.168.1.101',  # Different IP to avoid cooldown
+                dst_ip='10.0.0.1',
+                src_port=12346,
+                dst_port=80,
+                protocol='tcp'
+            )
         )
         
         alert = self.alert_manager.generate_alert(medium_prediction)
@@ -132,7 +139,14 @@ class TestAlertManager:
         # Low severity
         low_prediction = self.create_test_prediction(
             attack_class='Generic',
-            attack_probability=0.75
+            attack_probability=0.72,  # Just above min_confidence but below medium threshold
+            flow_key=FlowKey(
+                src_ip='192.168.1.102',  # Different IP to avoid cooldown
+                dst_ip='10.0.0.1',
+                src_port=12347,
+                dst_port=80,
+                protocol='tcp'
+            )
         )
         
         alert = self.alert_manager.generate_alert(low_prediction)

@@ -59,14 +59,25 @@ class FeatureExtractor:
         logger.info(f"Feature extractor initialized (numba={'enabled' if self.use_numba else 'disabled'})")
     
     def _create_flow_key(self, packet: PacketInfo) -> FlowKey:
-        """Create flow key from packet."""
-        return FlowKey(
-            src_ip=packet.src_ip,
-            dst_ip=packet.dst_ip,
-            src_port=packet.src_port,
-            dst_port=packet.dst_port,
-            protocol=packet.protocol
-        )
+        """Create normalized flow key from packet (bidirectional)."""
+        # Normalize flow key to handle bidirectional traffic
+        # Always put the "smaller" endpoint first for consistency
+        if (packet.src_ip, packet.src_port) < (packet.dst_ip, packet.dst_port):
+            return FlowKey(
+                src_ip=packet.src_ip,
+                dst_ip=packet.dst_ip,
+                src_port=packet.src_port,
+                dst_port=packet.dst_port,
+                protocol=packet.protocol
+            )
+        else:
+            return FlowKey(
+                src_ip=packet.dst_ip,
+                dst_ip=packet.src_ip,
+                src_port=packet.dst_port,
+                dst_port=packet.src_port,
+                protocol=packet.protocol
+            )
     
     def _get_or_create_flow(self, packet: PacketInfo) -> FlowState:
         """Get existing flow or create new one."""
@@ -203,11 +214,11 @@ class FeatureExtractor:
                 features['dns_qname_length'] = float(qname_length)
         
         # TLS SNI detection (simplified)
-        if packet.protocol == 'tcp' and packet.dst_port == 443:
+        if packet.protocol == 'tcp' and (packet.dst_port == 443 or packet.src_port == 443):
             # Look for TLS Client Hello with SNI
             # This is a very basic heuristic
             if len(payload) > 50 and payload[0] == 0x16:  # TLS Handshake
-                features['tls_sni_present'] = b'\\x00\\x00' in payload  # SNI extension marker
+                features['tls_sni_present'] = b'\x00\x00' in payload  # SNI extension marker
         
         return features
     
@@ -255,7 +266,7 @@ class FeatureExtractor:
         flow = self._get_or_create_flow(packet)
         self._update_flow_state(flow, packet)
         
-        # Determine packet direction
+        # Determine packet direction relative to normalized flow key
         direction = 0 if (packet.src_ip == flow.flow_key.src_ip and 
                          packet.src_port == flow.flow_key.src_port) else 1
         

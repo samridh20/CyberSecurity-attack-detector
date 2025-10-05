@@ -1,0 +1,18 @@
+--- a/backend/nids/models.py
++++ b/backend/nids/models.py
+@@ -340,9 +340,11 @@ class SimpleModelAdapter:
+         if feature_vector.burstiness > 2.0:
+             attack_score += 0.2
+         
+-        # Add some randomness for demonstration
+-        import random
+-        attack_score += random.uniform(-0.1, 0.1)
++        # Add deterministic variation based on flow key for consistency
++        # Use hash of flow key for reproducible "randomness"
++        flow_hash = hash((feature_vector.flow_key.src_ip, feature_vector.flow_key.dst_ip, 
++                         feature_vector.flow_key.src_port, feature_vector.flow_key.dst_port))
++        variation = (flow_hash % 200 - 100) / 1000.0  # Range: -0.1 to 0.1
++        attack_score += variation
+         
+         # Clamp to [0, 1]
+         attack_prob = max(0.0, min(1.0, attack_score))

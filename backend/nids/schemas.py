@@ -30,8 +30,7 @@ class PacketInfo(BaseModel):
     ttl: Optional[int] = None
     ip_flags: Optional[int] = None
     
-    class Config:
-        arbitrary_types_allowed = True
+    model_config = {"arbitrary_types_allowed": True}
 
 
 class FlowKey(BaseModel):
@@ -78,8 +77,7 @@ class FlowState(BaseModel):
     # Window tracking for sliding features
     recent_packets: List[PacketInfo] = Field(default_factory=list)
     
-    class Config:
-        arbitrary_types_allowed = True
+    model_config = {"arbitrary_types_allowed": True}
 
 
 class FeatureVector(BaseModel):
@@ -116,11 +114,10 @@ class FeatureVector(BaseModel):
     
     def to_array(self, feature_order: List[str]) -> np.ndarray:
         """Convert to numpy array in specified feature order."""
-        feature_dict = self.dict()
+        feature_dict = self.model_dump()
         return np.array([feature_dict.get(name, 0.0) for name in feature_order])
     
-    class Config:
-        arbitrary_types_allowed = True
+    model_config = {"arbitrary_types_allowed": True}
 
 
 class ModelPrediction(BaseModel):

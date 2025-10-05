@@ -72,6 +72,9 @@ class AlertManager:
         # Alert tracking for cooldown
         self.recent_alerts: Dict[str, float] = {}
         
+        # In-memory storage for recent alerts (for API access)
+        self._recent_alerts: List[Dict] = []
+        
         # Initialize toast notifier
         self.toast_notifier = None
         if self.toast_enabled:
@@ -230,7 +233,7 @@ class AlertManager:
             
             # Append to JSONL file
             with open(self.log_file, 'a', encoding='utf-8') as f:
-                f.write(json.dumps(alert_data) + '\\n')
+                f.write(json.dumps(alert_data) + '\n')
             
             logger.info(f"Alert logged: {alert.alert_id}")
             
@@ -270,6 +273,31 @@ class AlertManager:
         self._send_toast_notification(alert)
         self._log_alert(alert)
         
+        # Store in memory for API access
+        alert_dict = {
+            'id': alert.alert_id,
+            'timestamp': alert.timestamp,
+            'attack_type': alert.attack_type,
+            'attack_class': alert.attack_type,  # Frontend compatibility
+            'severity': alert.severity,
+            'confidence': alert.confidence,
+            'probability': alert.confidence,  # Frontend compatibility
+            'src_ip': alert.source_ip,
+            'dst_ip': alert.destination_ip,
+            'src_port': alert.flow_key.src_port,
+            'dst_port': alert.flow_key.dst_port,
+            'protocol': alert.flow_key.protocol,
+            'description': alert.description,
+            'recommended_action': alert.recommended_action,
+            'packet_length': getattr(alert.prediction, 'packet_size', 0),
+            'interface': 'auto',
+            'flags': 'SYN'  # Default for demo
+        }
+        
+        # Add to in-memory storage (keep last 1000)
+        self._recent_alerts.insert(0, alert_dict)
+        self._recent_alerts = self._recent_alerts[:1000]
+        
         logger.warning(f"SECURITY ALERT: {alert.description}")
         
         return alert
@@ -291,7 +319,7 @@ class AlertManager:
     
     def get_recent_alerts(self, limit: int = 100) -> List[Dict]:
         """
-        Get recent alerts from log file.
+        Get recent alerts from in-memory storage and log file.
         
         Args:
             limit: Maximum number of alerts to return
@@ -299,6 +327,11 @@ class AlertManager:
         Returns:
             List of recent alert dictionaries
         """
+        # First try in-memory storage (faster and more reliable)
+        if self._recent_alerts:
+            return self._recent_alerts[:limit]
+        
+        # Fallback to log file
         alerts = []
         
         try:
@@ -312,7 +345,27 @@ class AlertManager:
                 for line in recent_lines:
                     try:
                         alert_data = json.loads(line.strip())
-                        alerts.append(alert_data)
+                        # Convert to frontend format
+                        formatted_alert = {
+                            'id': alert_data.get('alert_id', str(uuid.uuid4())),
+                            'timestamp': alert_data.get('timestamp', time.time()),
+                            'attack_type': alert_data.get('attack_type', 'Unknown'),
+                            'attack_class': alert_data.get('attack_type', 'Unknown'),
+                            'severity': alert_data.get('severity', 'medium'),
+                            'confidence': alert_data.get('confidence', 0.5),
+                            'probability': alert_data.get('confidence', 0.5),
+                            'src_ip': alert_data.get('source_ip', 'unknown'),
+                            'dst_ip': alert_data.get('destination_ip', 'unknown'),
+                            'src_port': alert_data.get('src_port', 0),
+                            'dst_port': alert_data.get('destination_port', 0),
+                            'protocol': alert_data.get('protocol', 'unknown'),
+                            'description': alert_data.get('description', ''),
+                            'recommended_action': alert_data.get('recommended_action', ''),
+                            'packet_length': 0,
+                            'interface': 'auto',
+                            'flags': 'SYN'
+                        }
+                        alerts.append(formatted_alert)
                     except json.JSONDecodeError:
                         continue
         

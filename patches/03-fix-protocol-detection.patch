@@ -1,0 +1,12 @@
+--- a/backend/nids/features.py
++++ b/backend/nids/features.py
+@@ -215,7 +215,7 @@ class FeatureExtractor:
+         
+         # TLS SNI detection (simplified)
+-        if packet.protocol == 'tcp' and packet.dst_port == 443:
++        if packet.protocol == 'tcp' and (packet.dst_port == 443 or packet.src_port == 443):
+             # Look for TLS Client Hello with SNI
+             # This is a very basic heuristic
+             if len(payload) > 50 and payload[0] == 0x16:  # TLS Handshake
+-                features['tls_sni_present'] = b'\\x00\\x00' in payload  # SNI extension marker
++                features['tls_sni_present'] = b'\x00\x00' in payload  # SNI extension marker

@@ -1,0 +1,11 @@
+--- a/backend/nids/alerts.py
++++ b/backend/nids/alerts.py
+@@ -230,7 +230,7 @@ class AlertManager:
+             
+             # Append to JSONL file
+             with open(self.log_file, 'a', encoding='utf-8') as f:
+-                f.write(json.dumps(alert_data) + '\\n')
++                f.write(json.dumps(alert_data) + '\n')
+             
+             logger.info(f"Alert logged: {alert.alert_id}")
+             
