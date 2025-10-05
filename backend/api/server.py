@@ -255,47 +255,47 @@ class NIDSAPIServer:
                 # Get real alerts from the NIDS alert manager
                 alerts = []
                 
-                # First try to get stored alerts from test endpoint
-                if hasattr(self, '_stored_alerts'):
-                    alerts = self._stored_alerts[:limit]
-                    logger.info(f"Found {len(alerts)} stored alerts")
-                
-                # If no stored alerts, try the NIDS system
-                if not alerts:
-                    try:
-                        # Get alerts from the real NIDS system
-                        alerts = self.nids.alert_manager.get_recent_alerts(limit)
-                        
-                        # Convert to frontend format if needed
-                        formatted_alerts = []
-                        for alert in alerts:
-                            if isinstance(alert, dict):
-                                # Ensure frontend-compatible format
-                                formatted_alert = {
+                # FIRST: Try to get REAL ML-generated alerts from NIDS system
+                try:
+                    # Get alerts from the real NIDS system
+                    real_ml_alerts = self.nids.alert_manager.get_recent_alerts(limit)
+                    
+                    # Convert to frontend format if needed
+                    formatted_alerts = []
+                    for alert in real_ml_alerts:
+                        if isinstance(alert, dict):
+                            # Ensure frontend-compatible format
+                            formatted_alert = {
                                     "id": alert.get("id", f"alert_{int(time.time() * 1000)}"),
-                                    "timestamp": alert.get("timestamp", time.time()),
-                                    "attack_type": alert.get("attack_type", "Unknown"),
-                                    "attack_class": alert.get("attack_type", "Unknown"),  # Frontend expects this
-                                    "severity": alert.get("severity", "medium"),
-                                    "confidence": alert.get("confidence", 0.5),
-                                    "probability": alert.get("confidence", 0.5),  # Frontend expects this
-                                    "src_ip": alert.get("src_ip", "unknown"),
-                                    "dst_ip": alert.get("dst_ip", "unknown"),
-                                    "src_port": alert.get("src_port", 0),
-                                    "dst_port": alert.get("dst_port", 0),
-                                    "protocol": alert.get("protocol", "unknown"),
-                                    "description": alert.get("description", "Network attack detected"),
-                                    "recommended_action": alert.get("recommended_action", "Investigate and block if necessary")
-                                }
-                                formatted_alerts.append(formatted_alert)
-                            else:
-                                formatted_alerts.append(alert)
+                                "timestamp": alert.get("timestamp", time.time()),
+                                "attack_type": alert.get("attack_type", "Unknown"),
+                                "attack_class": alert.get("attack_type", "Unknown"),  # Frontend expects this
+                                "severity": alert.get("severity", "medium"),
+                                "confidence": alert.get("confidence", 0.5),
+                                "probability": alert.get("confidence", 0.5),  # Frontend expects this
+                                "src_ip": alert.get("src_ip", "unknown"),
+                                "dst_ip": alert.get("dst_ip", "unknown"),
+                                "src_port": alert.get("src_port", 0),
+                                "dst_port": alert.get("dst_port", 0),
+                                "protocol": alert.get("protocol", "unknown"),
+                                "description": alert.get("description", "Network attack detected"),
+                                "recommended_action": alert.get("recommended_action", "Investigate and block if necessary")
+                            }
+                            formatted_alerts.append(formatted_alert)
+                        else:
+                            formatted_alerts.append(alert)
                         
-                        alerts = formatted_alerts
+                    alerts = formatted_alerts
+                    logger.info(f"Got {len(alerts)} REAL ML alerts from NIDS")
                         
-                    except Exception as e:
-                        logger.warning(f"Could not get alerts from NIDS: {e}")
-                        alerts = []
+                except Exception as e:
+                    logger.warning(f"Could not get ML alerts from NIDS: {e}")
+                    alerts = []
+                
+                # FALLBACK: If no real ML alerts, try stored alerts from manual tests
+                if not alerts and hasattr(self, '_stored_alerts'):
+                    alerts = self._stored_alerts[:limit]
+                    logger.info(f"Fallback to {len(alerts)} stored test alerts")
                 
                 logger.info(f"Returning {len(alerts)} real alerts from network monitoring")
                 return alerts

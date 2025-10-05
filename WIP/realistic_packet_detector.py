@@ -22,6 +22,41 @@ class RealisticPacketDetector:
         self.flow_stats = {}
         self.port_scan_tracking = {}
         self.syn_flood_tracking = {}
+    
+    def is_exploit_payload(self, payload):
+        """Check if payload contains exploit patterns"""
+        if len(payload) < 10:
+            return False
+        
+        exploit_signatures = [
+            b"A" * 50,  # Buffer overflow pattern
+            b"\x90" * 20,  # NOP sled
+            b"%s" * 10,  # Format string
+            b"../",  # Directory traversal
+            b"<script>",  # XSS
+            b"' OR 1=1",  # SQL injection
+        ]
+        
+        for signature in exploit_signatures:
+            if signature in payload:
+                return True
+        return False
+    
+    def is_fuzzing_packet(self, tcp_layer, packet):
+        """Check if packet shows fuzzing characteristics"""
+        # Unusual flag combinations
+        if tcp_layer.flags > 63:  # Invalid flag combinations
+            return True
+        
+        # Very large packets
+        if len(packet) > 1400:
+            return True
+        
+        # Random window sizes
+        if tcp_layer.window == 0 or tcp_layer.window > 65000:
+            return True
+        
+        return False
         
     def is_suspicious_activity(self, src_ip, dst_ip, dst_port, protocol, tcp_flags=None):
         """Determine if activity is actually suspicious"""
@@ -48,8 +83,8 @@ class RealisticPacketDetector:
                                   if current_time - t < 10]
                     self.syn_flood_tracking[flood_key]['syns'] = recent_syns
                     
-                    # Real SYN flood: 10+ SYNs in 10 seconds to same target
-                    if len(recent_syns) >= 10:
+                    # Real SYN flood: 5+ SYNs in 10 seconds to same target (more sensitive)
+                    if len(recent_syns) >= 5:
                         return True, "DoS"
                 
                 # Real port scan: Many different ports in short time
@@ -68,8 +103,8 @@ class RealisticPacketDetector:
                                if current_time - timestamp < 30}
                 self.port_scan_tracking[scan_key]['ports'] = recent_ports
                 
-                # Real port scan: 10+ different ports in 30 seconds
-                if len(recent_ports) >= 10:
+                # Real port scan: 5+ different ports in 30 seconds (more sensitive)
+                if len(recent_ports) >= 5:
                     return True, "Reconnaissance"
         
         # External traffic patterns
@@ -88,8 +123,8 @@ class RealisticPacketDetector:
                               if current_time - t < 5]
                 self.syn_flood_tracking[flood_key]['syns'] = recent_syns
                 
-                # External SYN flood: 5+ SYNs in 5 seconds
-                if len(recent_syns) >= 5:
+                # External SYN flood: 3+ SYNs in 5 seconds (more sensitive)
+                if len(recent_syns) >= 3:
                     return True, "DoS"
             
             # External port scanning
@@ -108,8 +143,8 @@ class RealisticPacketDetector:
                                if current_time - timestamp < 20}
                 self.port_scan_tracking[scan_key]['ports'] = recent_ports
                 
-                # External port scan: 5+ different ports in 20 seconds
-                if len(recent_ports) >= 5:
+                # External port scan: 3+ different ports in 20 seconds (more sensitive)
+                if len(recent_ports) >= 3:
                     return True, "Reconnaissance"
         
         return False, None
@@ -139,14 +174,34 @@ class RealisticPacketDetector:
                 dst_port = tcp_layer.dport
                 protocol = "tcp"
                 tcp_flags = tcp_layer.flags
+                
+                # Check for exploit patterns in payload
+                if packet.haslayer(Raw):
+                    payload = bytes(packet[Raw])
+                    if self.is_exploit_payload(payload):
+                        self.generate_real_alert(src_ip, dst_ip, dst_port, "Exploits")
+                        return
+                
+                # Check for fuzzing patterns (unusual flags, large packets)
+                if self.is_fuzzing_packet(tcp_layer, packet):
+                    self.generate_real_alert(src_ip, dst_ip, dst_port, "Fuzzers")
+                    return
+                
             elif packet.haslayer(UDP):
                 udp_layer = packet[UDP]
                 dst_port = udp_layer.dport
                 protocol = "udp"
+                
+                # UDP to unusual ports or with unusual payloads
+                if dst_port > 10000 or (packet.haslayer(Raw) and len(packet[Raw]) > 1000):
+                    self.generate_real_alert(src_ip, dst_ip, dst_port, "Generic")
+                    return
+                
             elif packet.haslayer(ICMP):
                 protocol = "icmp"
-                # ICMP floods are suspicious if many in short time
-                # For now, we'll be conservative and not flag ICMP
+                # ICMP attacks are now detected
+                self.generate_real_alert(src_ip, dst_ip, 0, "DoS")
+                return
             
             # Check if this is suspicious
             is_attack, attack_type = self.is_suspicious_activity(

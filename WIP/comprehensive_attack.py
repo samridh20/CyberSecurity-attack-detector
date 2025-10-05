@@ -19,7 +19,7 @@ class ComprehensiveAttacker:
         self.target_ip = target_ip
         self.packets_sent = 0
         self.running = False
-        self.slow_mode = False
+
         
         # Attack type counters
         self.attack_stats = {
@@ -53,8 +53,7 @@ class ComprehensiveAttacker:
                 if self.attack_stats['Reconnaissance'] % 10 == 0:
                     print(f"   📡 Reconnaissance: {self.attack_stats['Reconnaissance']} scans sent")
                 
-                sleep_time = 3.0 if self.slow_mode else 1.0
-                time.sleep(sleep_time)  # Adjustable delay between scans
+                time.sleep(0.1)  # 100ms between scans (fast for pattern recognition)
                 
             except Exception as e:
                 print(f"   ❌ Recon failed on port {port}: {e}")
@@ -95,8 +94,7 @@ class ComprehensiveAttacker:
                 if self.attack_stats['DoS'] % 25 == 0:
                     print(f"   💥 DoS: {self.attack_stats['DoS']} packets sent")
                 
-                sleep_time = 2.0 if self.slow_mode else 0.5
-                time.sleep(sleep_time)  # Adjustable delay between DoS packets
+                time.sleep(0.02)  # 20ms between packets (high rate for DoS detection)
                 
             except Exception as e:
                 print(f"   ❌ DoS attack error: {e}")
@@ -144,8 +142,7 @@ class ComprehensiveAttacker:
                 if self.attack_stats['Exploits'] % 10 == 0:
                     print(f"   🎯 Exploits: {self.attack_stats['Exploits']} attempts sent")
                 
-                sleep_time = 5.0 if self.slow_mode else 2.0
-                time.sleep(sleep_time)  # Adjustable delay between exploits
+                time.sleep(0.5)  # 500ms between exploits (fast enough for pattern detection)
                 
             except Exception as e:
                 print(f"   ❌ Exploit attempt failed: {e}")
@@ -191,8 +188,7 @@ class ComprehensiveAttacker:
                 if self.attack_stats['Fuzzers'] % 15 == 0:
                     print(f"   🎲 Fuzzers: {self.attack_stats['Fuzzers']} fuzz packets sent")
                 
-                sleep_time = 4.0 if self.slow_mode else 1.5
-                time.sleep(sleep_time)  # Adjustable delay between fuzz attempts
+                time.sleep(0.3)  # 300ms between fuzz attempts (fast fuzzing)
                 
             except Exception as e:
                 print(f"   ❌ Fuzzer error: {e}")
@@ -222,7 +218,7 @@ class ComprehensiveAttacker:
                     for _ in range(3):  # Burst of 3 packets
                         packet = IP(dst=self.target_ip)/TCP(dport=80, flags="S")
                         send(packet, verbose=0)
-                        time.sleep(0.2)  # 200ms between burst packets
+                        time.sleep(0.01)  # 10ms between burst packets (high frequency)
                 
                 elif attack_pattern == 'large_packets':
                     # Unusually large packets
@@ -241,8 +237,7 @@ class ComprehensiveAttacker:
                 if self.attack_stats['Generic'] % 12 == 0:
                     print(f"   🔀 Generic: {self.attack_stats['Generic']} anomalous packets sent")
                 
-                sleep_time = 6.0 if self.slow_mode else 2.5
-                time.sleep(sleep_time)  # Adjustable delay between generic attacks
+                time.sleep(0.4)  # 400ms between generic attacks (fast pattern generation)
                 
             except Exception as e:
                 print(f"   ❌ Generic attack error: {e}")
@@ -256,12 +251,12 @@ class ComprehensiveAttacker:
         
         self.running = True
         
-        # Calculate duration for each attack type
-        recon_duration = duration // 4
-        dos_duration = duration // 3
-        exploits_duration = duration // 5
-        fuzzers_duration = duration // 6
-        generic_duration = duration // 5
+        # Calculate duration for each attack type (longer durations for better pattern detection)
+        recon_duration = duration * 2 // 3      # 67% of total time
+        dos_duration = duration * 3 // 4        # 75% of total time  
+        exploits_duration = duration // 2       # 50% of total time
+        fuzzers_duration = duration * 2 // 5    # 40% of total time
+        generic_duration = duration // 2        # 50% of total time
         
         # Launch all attack types in parallel (but staggered more)
         attacks = [
@@ -275,8 +270,8 @@ class ComprehensiveAttacker:
         print("🚀 Launching all attack vectors (with delays for system stability)...")
         for i, attack in enumerate(attacks):
             attack.start()
-            time.sleep(8)  # Stagger attacks by 8 seconds for better processing
-            print(f"   Vector {i+1}/5 launched (waiting 8s between launches)")
+            time.sleep(3)  # Stagger attacks by 3 seconds (back to original)
+            print(f"   Vector {i+1}/5 launched")
         
         # Wait for all attacks to complete
         for attack in attacks:
@@ -302,8 +297,7 @@ def main():
     parser.add_argument("--attack", choices=[
         "reconnaissance", "dos", "exploits", "fuzzers", "generic", "comprehensive"
     ], default="comprehensive", help="Attack type")
-    parser.add_argument("--duration", type=int, default=60, help="Attack duration in seconds")
-    parser.add_argument("--slow", action="store_true", help="Use slow mode for better system compatibility")
+    parser.add_argument("--duration", type=int, default=120, help="Attack duration in seconds (default: 2 minutes)")
     
     args = parser.parse_args()
     
@@ -317,13 +311,6 @@ def main():
     
     # Initialize attacker
     attacker = ComprehensiveAttacker(args.target_ip)
-    
-    # Apply slow mode if requested
-    if args.slow:
-        print("🐌 SLOW MODE: Extra delays for system compatibility")
-        attacker.slow_mode = True
-    else:
-        attacker.slow_mode = False
     
     print(f"\n🚀 Starting {args.attack} attack...")
     print("💡 Your NIDS should detect multiple attack types!")

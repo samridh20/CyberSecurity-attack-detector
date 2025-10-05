@@ -9,7 +9,7 @@ alerts:
 capture:
   buffer_size: 2048
   filter: tcp or udp
-  interface: Wi-Fi
+  interface: \Device\NPF_Loopback
   promiscuous: false
   timeout: 1.0
 evaluation:
