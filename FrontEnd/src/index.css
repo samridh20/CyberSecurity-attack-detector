@@ -1,0 +1,130 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
+All colors MUST be HSL.
+*/
+
+@layer base {
+  :root {
+    /* Spider-Verse Dark Theme - Base Colors */
+    --background: 260 80% 4%;
+    --foreground: 180 100% 90%;
+
+    --card: 260 60% 8%;
+    --card-foreground: 180 100% 90%;
+
+    --popover: 260 70% 6%;
+    --popover-foreground: 180 100% 90%;
+
+    /* Neon Pink Primary */
+    --primary: 338 100% 58%;
+    --primary-foreground: 260 80% 4%;
+    --primary-glow: 338 100% 70%;
+
+    /* Purple Secondary */
+    --secondary: 270 100% 50%;
+    --secondary-foreground: 180 100% 90%;
+
+    /* Muted Dark Purple */
+    --muted: 260 40% 15%;
+    --muted-foreground: 180 20% 65%;
+
+    /* Cyan Accent */
+    --accent: 184 100% 50%;
+    --accent-foreground: 260 80% 4%;
+
+    /* Danger Red */
+    --destructive: 348 100% 58%;
+    --destructive-foreground: 180 100% 90%;
+
+    /* Success Green */
+    --success: 158 100% 45%;
+    --success-foreground: 260 80% 4%;
+
+    /* Warning Orange */
+    --warning: 38 100% 50%;
+    --warning-foreground: 260 80% 4%;
+
+    --border: 260 50% 20%;
+    --input: 260 50% 15%;
+    --ring: 338 100% 58%;
+
+    --radius: 0.75rem;
+
+    /* Gradients */
+    --gradient-primary: linear-gradient(135deg, hsl(338 100% 58%), hsl(270 100% 50%));
+    --gradient-accent: linear-gradient(135deg, hsl(270 100% 50%), hsl(184 100% 50%));
+    --gradient-danger: linear-gradient(135deg, hsl(348 100% 58%), hsl(338 100% 58%));
+    
+    /* Glows and Shadows */
+    --glow-primary: 0 0 20px hsl(338 100% 58% / 0.5);
+    --glow-accent: 0 0 20px hsl(184 100% 50% / 0.5);
+    --glow-purple: 0 0 20px hsl(270 100% 50% / 0.5);
+    --shadow-lg: 0 10px 40px -10px hsl(260 80% 4% / 0.8);
+    
+    /* Animations */
+    --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+}
+
+@layer utilities {
+  .text-glow-primary {
+    text-shadow: 0 0 10px hsl(var(--primary) / 0.8), 0 0 20px hsl(var(--primary) / 0.4);
+  }
+  
+  .text-glow-accent {
+    text-shadow: 0 0 10px hsl(var(--accent) / 0.8), 0 0 20px hsl(var(--accent) / 0.4);
+  }
+  
+  .text-glow-purple {
+    text-shadow: 0 0 10px hsl(var(--secondary) / 0.8), 0 0 20px hsl(var(--secondary) / 0.4);
+  }
+
+  .border-glow {
+    box-shadow: 0 0 10px hsl(var(--primary) / 0.5), inset 0 0 10px hsl(var(--primary) / 0.1);
+  }
+
+  .border-glow-accent {
+    box-shadow: 0 0 10px hsl(var(--accent) / 0.5), inset 0 0 10px hsl(var(--accent) / 0.1);
+  }
+
+  @keyframes glitch {
+    0%, 100% { transform: translate(0); }
+    20% { transform: translate(-2px, 2px); }
+    40% { transform: translate(2px, -2px); }
+    60% { transform: translate(-2px, -2px); }
+    80% { transform: translate(2px, 2px); }
+  }
+
+  @keyframes glitch-text {
+    0%, 100% { 
+      text-shadow: 0 0 10px hsl(var(--primary) / 0.8);
+    }
+    25% { 
+      text-shadow: -2px 0 10px hsl(var(--accent) / 0.8), 2px 0 10px hsl(var(--secondary) / 0.8);
+    }
+    75% { 
+      text-shadow: 2px 0 10px hsl(var(--accent) / 0.8), -2px 0 10px hsl(var(--secondary) / 0.8);
+    }
+  }
+
+  .animate-glitch {
+    animation: glitch 0.3s ease-in-out;
+  }
+
+  .animate-glitch-text {
+    animation: glitch-text 0.5s ease-in-out;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+  }
+}
