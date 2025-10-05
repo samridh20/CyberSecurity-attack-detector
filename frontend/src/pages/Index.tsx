@@ -28,10 +28,10 @@ const Index = () => {
             <Shield className="h-12 w-12 text-primary animate-pulse-glow" />
             <div>
               <h1 className="text-4xl md:text-6xl font-orbitron font-black text-glow-primary tracking-tight">
-                NIDS SECURITY
+                V.E.N.O.M
               </h1>
               <p className="text-muted-foreground text-sm md:text-base">
-                Network Intrusion Detection System - REAL PACKET MONITORING
+                Versatile Event & Network Observation Module
               </p>
             </div>
           </div>

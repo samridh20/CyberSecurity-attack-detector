@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Audio Enable</title>
+</head>
+<body>
+    <h1>Test Audio Enable Button</h1>
+    <button onclick="testAudioEnable()">🔊 Enable Audio</button>
+    <button onclick="testSpeech()">🚨 Test Speech</button>
+    <div id="status"></div>
+
+    <script>
+        let audioEnabled = false;
+
+        async function testAudioEnable() {
+            const status = document.getElementById('status');
+            status.innerHTML = '🔊 Enabling audio...';
+            
+            try {
+                // Create and play a minimal silent audio to unlock autoplay
+                const silentAudio = new Audio();
+                silentAudio.src = 'data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAAAQESsAEBErAAAAAAAAgAQAGRhdGEEAAAAAAA=';
+                silentAudio.volume = 0.01;
+                silentAudio.muted = true;
+                
+                await silentAudio.play();
+                audioEnabled = true;
+                status.innerHTML = '✅ Audio enabled successfully!';
+                console.log('✅ Audio enabled successfully');
+                
+            } catch (error) {
+                console.warn('⚠️ Could not enable audio:', error);
+                status.innerHTML = `❌ Audio enable failed: ${error.message}`;
+            }
+        }
+
+        async function testSpeech() {
+            const status = document.getElementById('status');
+            
+            if (!audioEnabled) {
+                status.innerHTML = '❌ Audio not enabled - click Enable Audio first';
+                return;
+            }
+            
+            status.innerHTML = '🔊 Testing speech...';
+            
+            try {
+                // Test the backend speech endpoint
+                const response = await fetch('http://127.0.0.1:8000/speech/alert', {
+                    method: 'POST',
+                    headers: {
+                        'Accept': 'audio/mpeg',
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        attack_type: 'DDoS',
+                        source_ip: '192.168.1.100',
+                        confidence: 0.95
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Speech API error: ${response.status}`);
+                }
+
+                const audioBuffer = await response.arrayBuffer();
+                console.log('✅ Got audio buffer:', audioBuffer.byteLength, 'bytes');
+
+                const audioBlob = new Blob([audioBuffer], { type: 'audio/mpeg' });
+                const audioUrl = URL.createObjectURL(audioBlob);
+
+                const audio = new Audio(audioUrl);
+                audio.volume = 0.8;
+
+                await audio.play();
+                console.log('✅ Audio playing!');
+                status.innerHTML = '✅ Speech playing!';
+
+                audio.addEventListener('ended', () => {
+                    URL.revokeObjectURL(audioUrl);
+                    console.log('🔊 Audio finished');
+                    status.innerHTML = '🔊 Speech completed!';
+                });
+
+            } catch (error) {
+                console.error('❌ Speech test failed:', error);
+                status.innerHTML = `❌ Speech failed: ${error.message}`;
+            }
+        }
+    </script>
+</body>
+</html>

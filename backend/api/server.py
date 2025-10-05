@@ -1,5 +1,6 @@
 """
-FastAPI server for NIDS backend API
+FastAPI server for V.E.N.O.M backend API
+Versatile Event & Network Observation Module
 Provides endpoints for UI integration and system control
 """
 
@@ -21,11 +22,28 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from nids import RealTimeNIDS
 from nids.capture import PacketCapture
+from api.elevenlabs_service import elevenlabs_service
 
 
 class InterfaceReloadRequest(BaseModel):
     """Request model for interface reload"""
     iface: str
+
+
+class SpeechRequest(BaseModel):
+    """Request model for speech generation"""
+    text: str
+    voice: Optional[str] = "urgent"
+    stability: Optional[float] = 0.5
+    similarity_boost: Optional[float] = 0.8
+
+
+class AlertSpeechRequest(BaseModel):
+    """Request model for alert speech generation"""
+    attack_type: str
+    source_ip: str
+    confidence: float
+    target_ip: Optional[str] = None
 
 
 class APIResponse(BaseModel):
@@ -43,8 +61,8 @@ class NIDSAPIServer:
         self.config = self._load_config()
         self.nids: Optional[RealTimeNIDS] = None
         self.app = FastAPI(
-            title="NIDS Backend API",
-            description="Network Intrusion Detection System Backend API",
+            title="V.E.N.O.M Backend API",
+            description="Versatile Event & Network Observation Module Backend API",
             version="1.0.0"
         )
         
@@ -116,6 +134,62 @@ class NIDSAPIServer:
     def _setup_routes(self):
         """Setup FastAPI routes"""
         
+        @self.app.post("/speech/generate")
+        async def generate_speech(request: SpeechRequest):
+            """Generate speech audio from text"""
+            try:
+                audio_data = await elevenlabs_service.generate_speech_audio(
+                    text=request.text,
+                    voice=request.voice,
+                    stability=request.stability,
+                    similarity_boost=request.similarity_boost
+                )
+                
+                if audio_data:
+                    from fastapi.responses import Response
+                    return Response(
+                        content=audio_data,
+                        media_type="audio/mpeg",
+                        headers={
+                            "Content-Disposition": "attachment; filename=alert.mp3",
+                            "Cache-Control": "no-cache"
+                        }
+                    )
+                else:
+                    raise HTTPException(status_code=500, detail="Speech generation failed")
+                    
+            except Exception as e:
+                logger.error(f"Speech generation failed: {e}")
+                raise HTTPException(status_code=500, detail=str(e))
+        
+        @self.app.post("/speech/alert")
+        async def generate_alert_speech(request: AlertSpeechRequest):
+            """Generate speech for security alert"""
+            try:
+                audio_data = await elevenlabs_service.generate_alert_audio_stream(
+                    attack_type=request.attack_type,
+                    source_ip=request.source_ip,
+                    confidence=request.confidence,
+                    target_ip=request.target_ip
+                )
+                
+                if audio_data:
+                    from fastapi.responses import Response
+                    return Response(
+                        content=audio_data,
+                        media_type="audio/mpeg",
+                        headers={
+                            "Content-Disposition": "attachment; filename=security_alert.mp3",
+                            "Cache-Control": "no-cache"
+                        }
+                    )
+                else:
+                    raise HTTPException(status_code=500, detail="Alert speech generation failed")
+                    
+            except Exception as e:
+                logger.error(f"Alert speech generation failed: {e}")
+                raise HTTPException(status_code=500, detail=str(e))
+
         @self.app.get("/health")
         async def health_check():
             """Health check endpoint"""
@@ -472,7 +546,7 @@ def start_api_server(port: int = 8000, config_path: str = "config.yaml", host: s
         api_server = NIDSAPIServer(config_path)
         
         # Start the server
-        logger.info(f"Starting NIDS API server on {host}:{port}")
+        logger.info(f"Starting V.E.N.O.M API server on {host}:{port}")
         uvicorn.run(
             api_server.app,
             host=host,

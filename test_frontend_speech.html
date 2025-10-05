@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Frontend Speech</title>
+</head>
+<body>
+    <h1>Test ElevenLabs Speech</h1>
+    <button onclick="testSpeech()">🔊 Test Speech</button>
+    <div id="status"></div>
+
+    <script>
+        async function testSpeech() {
+            const status = document.getElementById('status');
+            status.innerHTML = '🔊 Testing speech...';
+            
+            try {
+                console.log('🚨 Starting speech test');
+                
+                // Test the backend speech endpoint directly
+                const response = await fetch('http://127.0.0.1:8000/speech/alert', {
+                    method: 'POST',
+                    headers: {
+                        'Accept': 'audio/mpeg',
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        attack_type: 'Reconnaissance',
+                        source_ip: '192.168.1.100',
+                        confidence: 0.95
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Speech API error: ${response.status}`);
+                }
+
+                const audioBuffer = await response.arrayBuffer();
+                console.log('✅ Got audio buffer:', audioBuffer.byteLength, 'bytes');
+
+                const audioBlob = new Blob([audioBuffer], { type: 'audio/mpeg' });
+                const audioUrl = URL.createObjectURL(audioBlob);
+
+                const audio = new Audio(audioUrl);
+                audio.volume = 0.8;
+
+                // Play the audio
+                await audio.play();
+                console.log('✅ Audio playing!');
+                status.innerHTML = '✅ Speech playing!';
+
+                // Clean up when done
+                audio.addEventListener('ended', () => {
+                    URL.revokeObjectURL(audioUrl);
+                    console.log('🔊 Audio finished');
+                    status.innerHTML = '🔊 Speech completed!';
+                });
+
+            } catch (error) {
+                console.error('❌ Speech test failed:', error);
+                status.innerHTML = `❌ Speech failed: ${error.message}`;
+            }
+        }
+    </script>
+</body>
+</html>

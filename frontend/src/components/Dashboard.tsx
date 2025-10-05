@@ -7,6 +7,7 @@ import { SOCTestPanel } from "./SOCTestPanel";
 import { RealTimeSOCPopup } from "./RealTimeSOCPopup";
 import { useRealTimeSOC } from "@/hooks/useRealTimeSOC";
 import { SOCTriggerButton } from "./SOCTriggerButton";
+import { toast } from "sonner";
 
 interface DashboardProps {
   stats: Stats;
@@ -18,7 +19,18 @@ interface DashboardProps {
 
 export const Dashboard = ({ stats, isCapturing, alertsHistory, classDistribution, alerts }: DashboardProps) => {
   // Real-time SOC integration - automatically triggers on new attacks
-  const { isAnalyzing, socResponse, isPopupOpen, closePopup } = useRealTimeSOC(alerts);
+  const { 
+    isAnalyzing, 
+    socResponse, 
+    isPopupOpen, 
+    isPlayingAlert,
+    isAutoExecuting,
+    executedSteps,
+    currentExecutingStep,
+    closePopup,
+    executeStepAutomatically,
+    executeAllStepsAutomatically
+  } = useRealTimeSOC(alerts);
 
   const formatTime = (timestamp: number | null) => {
     if (!timestamp) return "No alerts yet";
@@ -99,8 +111,26 @@ export const Dashboard = ({ stats, isCapturing, alertsHistory, classDistribution
       {/* SOC Test Panel */}
       <SOCTestPanel />
 
-      {/* Real-Time SOC Demo Trigger */}
-      <div className="flex justify-center">
+      {/* Audio Enable & SOC Demo Trigger */}
+      <div className="flex justify-center gap-4">
+        <button
+          onClick={async () => {
+            try {
+              const { elevenLabsService } = await import('@/lib/elevenlabs');
+              await elevenLabsService.enableAudio();
+              toast.success('🔊 Audio enabled for spoken alerts!', {
+                description: 'You will now hear spoken security alerts'
+              });
+            } catch (error) {
+              toast.error('Failed to enable audio', {
+                description: 'Check browser permissions'
+              });
+            }
+          }}
+          className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-orbitron font-semibold border-glow"
+        >
+          🔊 Enable Spoken Alerts
+        </button>
         <SOCTriggerButton alerts={alerts} />
       </div>
 
@@ -110,6 +140,12 @@ export const Dashboard = ({ stats, isCapturing, alertsHistory, classDistribution
         onClose={closePopup}
         response={socResponse}
         isLoading={isAnalyzing}
+        isPlayingAlert={isPlayingAlert}
+        isAutoExecuting={isAutoExecuting}
+        executedSteps={executedSteps}
+        currentExecutingStep={currentExecutingStep}
+        onExecuteStep={executeStepAutomatically}
+        onExecuteAll={executeAllStepsAutomatically}
       />
     </div>
   );

@@ -20,49 +20,64 @@ interface RealTimeSOCPopupProps {
   onClose: () => void;
   response: SOCResponse | null;
   isLoading: boolean;
+  isPlayingAlert?: boolean;
+  isAutoExecuting?: boolean;
+  executedSteps?: Set<number>;
+  currentExecutingStep?: number | null;
+  onExecuteStep?: (step: SOCStep, index: number) => Promise<void>;
+  onExecuteAll?: () => Promise<void>;
 }
 
-export const RealTimeSOCPopup = ({ isOpen, onClose, response, isLoading }: RealTimeSOCPopupProps) => {
-  const [executedSteps, setExecutedSteps] = useState<Set<number>>(new Set());
-  const [executingStep, setExecutingStep] = useState<number | null>(null);
+export const RealTimeSOCPopup = ({ 
+  isOpen, 
+  onClose, 
+  response, 
+  isLoading,
+  isPlayingAlert = false,
+  isAutoExecuting = false,
+  executedSteps = new Set(),
+  currentExecutingStep = null,
+  onExecuteStep,
+  onExecuteAll
+}: RealTimeSOCPopupProps) => {
+  // Remove local state since we're using props from the hook
+  // const [executedSteps, setExecutedSteps] = useState<Set<number>>(new Set());
+  // const [executingStep, setExecutingStep] = useState<number | null>(null);
 
 
   const executeStep = async (step: SOCStep, index: number) => {
-    if (!step.commands.windows) {
-      toast.info("No command available for this step");
-      return;
-    }
+    if (onExecuteStep) {
+      await onExecuteStep(step, index);
+    } else {
+      // Fallback to manual clipboard copy
+      if (!step.commands.windows) {
+        toast.info("No command available for this step");
+        return;
+      }
 
-    setExecutingStep(index);
-    
-    try {
-      // Copy command to clipboard
-      await navigator.clipboard.writeText(step.commands.windows);
-      
-      // Mark as executed after a short delay
-      setTimeout(() => {
-        setExecutedSteps(prev => new Set([...prev, index]));
-        setExecutingStep(null);
+      try {
+        await navigator.clipboard.writeText(step.commands.windows);
         toast.success(`✅ Step ${index + 1}: ${step.title}`, {
           description: "Command copied - execute in PowerShell",
           duration: 3000,
         });
-      }, 500);
-      
-    } catch (error) {
-      console.error('Failed to copy command:', error);
-      setExecutingStep(null);
-      toast.error("Failed to copy command");
+      } catch (error) {
+        console.error('Failed to copy command:', error);
+        toast.error("Failed to copy command");
+      }
     }
   };
 
   const executeAllSteps = async () => {
-    if (!response) return;
-
-    for (let i = 0; i < response.steps.length; i++) {
-      if (!executedSteps.has(i) && response.steps[i].commands.windows) {
-        await executeStep(response.steps[i], i);
-        await new Promise(resolve => setTimeout(resolve, 1000)); // 1 second delay between steps
+    if (onExecuteAll) {
+      await onExecuteAll();
+    } else if (response) {
+      // Fallback to manual execution
+      for (let i = 0; i < response.steps.length; i++) {
+        if (!executedSteps.has(i) && response.steps[i].commands.windows) {
+          await executeStep(response.steps[i], i);
+          await new Promise(resolve => setTimeout(resolve, 1000));
+        }
       }
     }
   };
@@ -81,24 +96,41 @@ export const RealTimeSOCPopup = ({ isOpen, onClose, response, isLoading }: RealT
     return <Shield className="h-4 w-4" />;
   };
 
-  if (isLoading) {
+  if (isLoading || isPlayingAlert) {
     return (
       <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="max-w-2xl border-primary border-2 border-glow bg-background/95 backdrop-blur">
+        <DialogContent className="max-w-2xl border-primary border-2 border-glow bg-background/95 backdrop-blur shadow-2xl mx-auto my-8">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 font-orbitron font-black text-glow-primary">
               <Zap className="h-5 w-5 animate-pulse-glow text-primary" />
               🚨 SOC ANALYST ACTIVATED
             </DialogTitle>
             <DialogDescription className="text-glow-accent font-space font-medium">
-              Real-time attack detected! Analyzing threat and preparing immediate response...
+              {isPlayingAlert 
+                ? "🔊 PLAYING URGENT SECURITY ALERT - Listen for instructions..."
+                : "Real-time attack detected! Analyzing threat and preparing immediate response..."
+              }
             </DialogDescription>
           </DialogHeader>
           <div className="flex flex-col items-center justify-center py-8 space-y-4">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary border-glow animate-pulse-glow"></div>
             <div className="text-center">
-              <p className="font-orbitron font-medium text-glow-primary">Analyzing attack patterns...</p>
-              <p className="text-sm text-muted-foreground font-space">Generating response plan...</p>
+              {isPlayingAlert ? (
+                <>
+                  <div className="flex items-center justify-center gap-2 mb-2">
+                    <div className="w-2 h-2 bg-primary rounded-full animate-pulse"></div>
+                    <div className="w-2 h-2 bg-primary rounded-full animate-pulse" style={{animationDelay: '0.2s'}}></div>
+                    <div className="w-2 h-2 bg-primary rounded-full animate-pulse" style={{animationDelay: '0.4s'}}></div>
+                  </div>
+                  <p className="font-orbitron font-medium text-glow-primary">🔊 SPEAKING SECURITY ALERT</p>
+                  <p className="text-sm text-muted-foreground font-space">Automated response will begin after alert...</p>
+                </>
+              ) : (
+                <>
+                  <p className="font-orbitron font-medium text-glow-primary">Analyzing attack patterns...</p>
+                  <p className="text-sm text-muted-foreground font-space">Generating response plan...</p>
+                </>
+              )}
             </div>
           </div>
         </DialogContent>
@@ -114,7 +146,7 @@ export const RealTimeSOCPopup = ({ isOpen, onClose, response, isLoading }: RealT
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] border-primary border-2 border-glow overflow-hidden flex flex-col bg-background/95 backdrop-blur">
+      <DialogContent className="max-w-4xl max-h-[90vh] border-primary border-2 border-glow overflow-hidden flex flex-col bg-background/95 backdrop-blur shadow-2xl mx-auto my-4">
         <DialogHeader>
           <DialogTitle className="flex items-center justify-between">
             <div className="flex items-center gap-2 font-orbitron font-black text-glow-primary">
@@ -127,7 +159,7 @@ export const RealTimeSOCPopup = ({ isOpen, onClose, response, isLoading }: RealT
           </DialogDescription>
         </DialogHeader>
 
-        <ScrollArea className="flex-1 pr-4">
+        <ScrollArea className="flex-1 pr-4 max-h-[calc(90vh-120px)] overflow-y-auto">
           <div className="space-y-4">
             {/* Threat Classification */}
           <Card className="border-glow bg-card/50 backdrop-blur">
@@ -148,12 +180,25 @@ export const RealTimeSOCPopup = ({ isOpen, onClose, response, isLoading }: RealT
           <Card className="border-glow bg-card/50 backdrop-blur">
             <CardContent className="pt-4">
               <div className="flex items-center justify-between mb-2">
-                <span className="font-orbitron font-bold text-glow-accent">📊 Response Progress</span>
+                <div className="flex items-center gap-2">
+                  <span className="font-orbitron font-bold text-glow-accent">📊 Response Progress</span>
+                  {isAutoExecuting && (
+                    <div className="flex items-center gap-1 text-xs text-primary">
+                      <div className="animate-spin rounded-full h-3 w-3 border-b border-primary"></div>
+                      <span className="font-space font-medium">AUTO-EXECUTING</span>
+                    </div>
+                  )}
+                </div>
                 <span className="text-sm font-space font-medium text-muted-foreground">
                   {completedSteps}/{totalSteps} steps completed
                 </span>
               </div>
               <Progress value={progressPercentage} className="h-2" />
+              {isAutoExecuting && (
+                <div className="text-xs text-muted-foreground mt-1 font-space">
+                  🤖 Automated security response in progress...
+                </div>
+              )}
             </CardContent>
           </Card>
 
@@ -196,7 +241,7 @@ export const RealTimeSOCPopup = ({ isOpen, onClose, response, isLoading }: RealT
                 <div className="space-y-3">
                   {response.steps.map((step, index) => {
                     const isExecuted = executedSteps.has(index);
-                    const isExecuting = executingStep === index;
+                    const isExecuting = currentExecutingStep === index;
                     const isUrgent = index < 3; // First 3 steps are most urgent
                     
                     return (
@@ -246,14 +291,19 @@ export const RealTimeSOCPopup = ({ isOpen, onClose, response, isLoading }: RealT
                             <Button
                               size="sm"
                               variant={isExecuted ? "outline" : isUrgent ? "destructive" : "default"}
-                              disabled={isExecuting || !step.commands.windows}
+                              disabled={isExecuting || !step.commands.windows || isAutoExecuting}
                               onClick={() => executeStep(step, index)}
                               className="shrink-0 min-w-[100px]"
                             >
                               {isExecuting ? (
-                                <div className="animate-spin rounded-full h-3 w-3 border-b border-white"></div>
+                                <div className="flex items-center gap-1">
+                                  <div className="animate-spin rounded-full h-3 w-3 border-b border-white"></div>
+                                  <span className="text-xs">AUTO</span>
+                                </div>
                               ) : isExecuted ? (
                                 "✅ Done"
+                              ) : isAutoExecuting ? (
+                                "🤖 Queued"
                               ) : (
                                 step.button_label
                               )}

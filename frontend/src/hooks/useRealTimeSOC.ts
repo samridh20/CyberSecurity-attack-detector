@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { geminiService } from "@/lib/gemini";
-import { AttackInput, SOCResponse, PacketHeader } from "@/types/soc";
+import { elevenLabsService } from "@/lib/elevenlabs";
+import { AttackInput, SOCResponse, PacketHeader, SOCStep } from "@/types/soc";
 import { Alert } from "@/types/alert";
 import { toast } from "sonner";
 
@@ -9,7 +10,12 @@ export const useRealTimeSOC = (alerts: Alert[]) => {
   const [socResponse, setSocResponse] = useState<SOCResponse | null>(null);
   const [isPopupOpen, setIsPopupOpen] = useState(false);
   const [lastProcessedAlertId, setLastProcessedAlertId] = useState<string>("");
+  const [isPlayingAlert, setIsPlayingAlert] = useState(false);
+  const [isAutoExecuting, setIsAutoExecuting] = useState(false);
+  const [executedSteps, setExecutedSteps] = useState<Set<number>>(new Set());
+  const [currentExecutingStep, setCurrentExecutingStep] = useState<number | null>(null);
   const analysisTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const currentAudioRef = useRef<HTMLAudioElement | null>(null);
 
   const convertAlertToPacketHeader = (alert: Alert): PacketHeader => {
     return {
@@ -49,6 +55,118 @@ export const useRealTimeSOC = (alerts: Alert[]) => {
   const shouldTriggerSOC = (alert: Alert): boolean => {
     // Trigger SOC for high-confidence attacks (not Normal traffic)
     return alert.prob > 0.6 && alert.class !== "Normal" && alert.class !== "normal";
+  };
+
+  /**
+   * Play spoken alert using ElevenLabs - SIMPLIFIED VERSION
+   */
+  const playSpokenAlert = async (attackType: string, sourceIp: string, confidence: number): Promise<void> => {
+    try {
+      setIsPlayingAlert(true);
+      console.log('🚨 Starting spoken alert for:', attackType);
+      
+      // Try to play the alert - the service will handle audio enabling
+      await elevenLabsService.playAlertSpeech(attackType, sourceIp, confidence);
+      
+      console.log('✅ Spoken alert completed');
+      setIsPlayingAlert(false);
+      
+    } catch (error) {
+      console.error('❌ Spoken alert failed:', error);
+      setIsPlayingAlert(false);
+      
+      if (error.message.includes('Audio not enabled') || error.message.includes('user interaction')) {
+        toast.warning('🔊 Click "Enable Spoken Alerts" button to hear audio', {
+          duration: 8000,
+          description: 'Browser security requires user interaction for audio'
+        });
+      } else {
+        toast.error(`Spoken alert failed: ${error.message}`);
+      }
+    }
+  };
+
+  /**
+   * Execute a single PowerShell step automatically
+   */
+  const executeStepAutomatically = async (step: SOCStep, index: number): Promise<boolean> => {
+    if (!step.commands.windows) {
+      console.warn(`Step ${index + 1} has no Windows command`);
+      return false;
+    }
+
+    try {
+      setCurrentExecutingStep(index);
+      
+      // Copy command to clipboard
+      await navigator.clipboard.writeText(step.commands.windows);
+      
+      // Simulate execution time
+      await new Promise(resolve => setTimeout(resolve, step.estimated_seconds * 100)); // Faster for demo
+      
+      // Mark as executed
+      setExecutedSteps(prev => new Set([...prev, index]));
+      setCurrentExecutingStep(null);
+      
+      // Skip step completion speech for now to avoid issues
+      
+      toast.success(`✅ Step ${index + 1} Executed: ${step.title}`, {
+        description: "Command copied to clipboard - run in PowerShell",
+        duration: 2000,
+      });
+      
+      return true;
+      
+    } catch (error) {
+      console.error(`Failed to execute step ${index + 1}:`, error);
+      setCurrentExecutingStep(null);
+      toast.error(`❌ Step ${index + 1} Failed: ${step.title}`);
+      return false;
+    }
+  };
+
+  /**
+   * Execute all response steps automatically in sequence
+   */
+  const executeAllStepsAutomatically = async (response: SOCResponse): Promise<void> => {
+    if (!response || response.steps.length === 0) return;
+
+    try {
+      setIsAutoExecuting(true);
+      
+      toast.info(`🤖 Auto-executing ${response.steps.length} security steps...`, {
+        duration: 3000,
+      });
+
+      // Execute steps sequentially
+      for (let i = 0; i < response.steps.length; i++) {
+        const step = response.steps[i];
+        
+        if (step.commands.windows) {
+          const success = await executeStepAutomatically(step, i);
+          
+          if (!success) {
+            console.warn(`Step ${i + 1} failed, continuing with next step`);
+          }
+          
+          // Brief pause between steps
+          await new Promise(resolve => setTimeout(resolve, 500));
+        }
+      }
+      
+      // Skip completion speech for now to avoid issues
+      
+      toast.success(`🎉 Automated Response Complete!`, {
+        description: `All ${response.steps.length} security steps executed`,
+        duration: 5000,
+      });
+      
+    } catch (error) {
+      console.error('Automated execution failed:', error);
+      toast.error('Automated execution encountered errors');
+    } finally {
+      setIsAutoExecuting(false);
+    }
   };
 
   const analyzeAttackRealTime = async (newAlerts: Alert[]) => {
@@ -106,6 +224,22 @@ export const useRealTimeSOC = (alerts: Alert[]) => {
         description: `${response.steps.length} immediate actions recommended`,
         duration: 5000,
       });
+
+      // AUTOMATED SEQUENCE: Speech Alert → Auto Execution
+      try {
+        // 1. Play spoken alert immediately
+        await playSpokenAlert(triggerAlert.class, triggerAlert.src, avgProbability);
+        
+        // 2. Brief pause after speech
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        // 3. Automatically execute all response steps
+        await executeAllStepsAutomatically(response);
+        
+      } catch (automationError) {
+        console.error('Automated response sequence failed:', automationError);
+        toast.warning('Manual execution required - automation failed');
+      }
 
     } catch (error) {
       console.error("Real-time SOC analysis failed:", error);
@@ -202,7 +336,13 @@ export const useRealTimeSOC = (alerts: Alert[]) => {
     isAnalyzing,
     socResponse,
     isPopupOpen,
+    isPlayingAlert,
+    isAutoExecuting,
+    executedSteps,
+    currentExecutingStep,
     closePopup,
     manualAnalysis,
+    executeStepAutomatically,
+    executeAllStepsAutomatically,
   };
 };

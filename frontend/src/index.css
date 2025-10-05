@@ -117,6 +117,45 @@ All colors MUST be HSL.
   .animate-glitch-text {
     animation: glitch-text 0.5s ease-in-out;
   }
+
+  /* Fix dialog overflow and positioning */
+  .dialog-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 50;
+    background: rgba(0, 0, 0, 0.8);
+    backdrop-filter: blur(4px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .dialog-content {
+    position: relative;
+    z-index: 50;
+    max-width: min(90vw, 1000px);
+    max-height: 90vh;
+    overflow: hidden;
+    border-radius: 0.75rem;
+    margin: auto;
+  }
+
+  /* Ensure scrollable content doesn't leak */
+  .scroll-area-viewport {
+    max-height: 100%;
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
+
+  /* Audio visualization */
+  @keyframes audio-pulse {
+    0%, 100% { opacity: 0.4; transform: scaleY(1); }
+    50% { opacity: 1; transform: scaleY(1.5); }
+  }
+
+  .audio-indicator {
+    animation: audio-pulse 0.6s ease-in-out infinite;
+  }
 }
 
 @layer base {
