@@ -1,0 +1,9 @@
+{
+  "note": "Coefficient extraction needs to be customized based on MATLAB export format",
+  "available_fields": [
+    "s0",
+    "s1",
+    "s2",
+    "arr"
+  ]
+}

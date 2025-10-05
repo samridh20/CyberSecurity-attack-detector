@@ -1,0 +1,127 @@
+Metadata-Version: 2.4
+Name: nids-realtime
+Version: 1.0.0
+Summary: Real-Time Network Intrusion Detection System
+Home-page: https://github.com/example/nids-realtime
+Author: NIDS Team
+Author-email: nids@example.com
+Project-URL: Bug Reports, https://github.com/example/nids-realtime/issues
+Project-URL: Source, https://github.com/example/nids-realtime
+Project-URL: Documentation, https://github.com/example/nids-realtime/wiki
+Classifier: Development Status :: 4 - Beta
+Classifier: Intended Audience :: Information Technology
+Classifier: Intended Audience :: System Administrators
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Operating System :: Microsoft :: Windows
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.8
+Classifier: Programming Language :: Python :: 3.9
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Classifier: Topic :: Security
+Classifier: Topic :: System :: Networking :: Monitoring
+Requires-Python: >=3.8
+Description-Content-Type: text/markdown
+Requires-Dist: numpy>=1.24.0
+Requires-Dist: pandas>=2.0.0
+Requires-Dist: scikit-learn>=1.3.0
+Requires-Dist: joblib>=1.3.0
+Requires-Dist: pydantic>=2.0.0
+Requires-Dist: scapy>=2.5.0
+Requires-Dist: winrt-Windows.UI.Notifications>=1.0.0; sys_platform == "win32"
+Requires-Dist: win10toast>=0.9; sys_platform == "win32"
+Requires-Dist: pyyaml>=6.0
+Requires-Dist: loguru>=0.7.0
+Requires-Dist: numba>=0.58.0
+Requires-Dist: pytest>=7.0.0
+Requires-Dist: pytest-cov>=4.0.0
+Requires-Dist: scipy>=1.10.0
+Requires-Dist: h5py>=3.8.0
+Provides-Extra: dev
+Requires-Dist: pytest>=7.0.0; extra == "dev"
+Requires-Dist: pytest-cov>=4.0.0; extra == "dev"
+Requires-Dist: black>=22.0.0; extra == "dev"
+Requires-Dist: flake8>=5.0.0; extra == "dev"
+Requires-Dist: mypy>=1.0.0; extra == "dev"
+Provides-Extra: plotting
+Requires-Dist: matplotlib>=3.5.0; extra == "plotting"
+Requires-Dist: seaborn>=0.11.0; extra == "plotting"
+Provides-Extra: performance
+Requires-Dist: numba>=0.58.0; extra == "performance"
+Dynamic: author
+Dynamic: author-email
+Dynamic: classifier
+Dynamic: description
+Dynamic: description-content-type
+Dynamic: home-page
+Dynamic: project-url
+Dynamic: provides-extra
+Dynamic: requires-dist
+Dynamic: requires-python
+Dynamic: summary
+
+# Real-Time Network Intrusion Detection System
+
+A modular Python pipeline for real-time network intrusion detection using MATLAB-trained models.
+
+## Features
+
+- **Real-time packet capture** using Scapy + Npcap
+- **Modular architecture** with swappable components
+- **MATLAB model compatibility** for logistic regression and multi-class classification
+- **Low-latency processing** (≤50ms per packet, ≤200ms for multi-class)
+- **Windows toast notifications** for alerts
+- **Comprehensive evaluation** with precision/recall/F1 metrics
+
+## Architecture
+
+```
+Capture → Parse → Sessionize → Features → Scale/Encode → Select → Model → Alert
+```
+
+## Installation
+
+See [INSTALL.md](INSTALL.md) for detailed installation instructions.
+
+**Quick Start:**
+1. Install Npcap from https://npcap.com/ (with WinPcap compatibility)
+2. `pip install -r requirements.txt`
+3. `python scripts/export_matlab_metadata.py --create-sample` (for testing)
+4. `python main.py --demo` (run demo)
+
+## Quick Start
+
+```python
+from nids import RealTimeNIDS
+
+# Initialize system
+nids = RealTimeNIDS('config.yaml')
+
+# Start real-time detection
+nids.start_detection()
+```
+
+## Configuration
+
+Edit `config.yaml` to customize:
+- Model paths and thresholds
+- Feature extraction parameters
+- Alert settings
+- Performance tuning options
+
+## Latency Targets
+
+- **Per-packet binary inference**: ≤50ms average
+- **Multi-class classification**: +200ms when triggered
+- **Memory usage**: Optimized for single-core laptops
+
+## Testing
+
+```bash
+# Run unit tests
+pytest tests/
+
+# Evaluate on PCAP replay
+python scripts/evaluate_offline.py --pcap sample.pcap --config config.yaml
+```

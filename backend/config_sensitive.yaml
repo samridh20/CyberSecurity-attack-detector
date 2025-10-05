@@ -1,0 +1,70 @@
+# Real-Time Network Intrusion Detection Configuration - Sensitive Detection
+
+# Model Configuration
+models:
+  binary_classifier:
+    path: "models/logistic_regression_model.mat"
+    threshold: 0.3  # Lower threshold for more sensitive detection
+    type: "logistic_regression"
+  
+  multiclass_classifier:
+    path: "models/decision_tree_model.mat"
+    type: "decision_tree"
+    
+  # Feature metadata (exported from MATLAB)
+  metadata:
+    feature_order: "models/feature_order.json"
+    scaler_params: "models/scaler_params.json"
+    class_encoder: "models/class_encoder.json"
+
+# Network Capture Settings
+capture:
+  interface: null  # null = auto-detect
+  filter: "tcp or udp"  # BPF filter
+  promiscuous: false
+  buffer_size: 2048
+  timeout: 1.0  # seconds
+
+# Feature Extraction
+features:
+  window_size: 10
+  window_overlap: 0.5
+  session_timeout: 300
+  max_payload_bytes: 1500
+  packet_features: true
+  flow_features: true
+  temporal_features: true
+  payload_features: true
+
+# Performance Tuning
+performance:
+  max_packet_latency: 50
+  max_multiclass_latency: 200
+  max_concurrent_sessions: 1000
+  feature_cache_size: 5000
+  use_numba: true
+  batch_processing: false
+
+# Alert Configuration - More Sensitive
+alerts:
+  toast_enabled: true
+  toast_duration: 3
+  toast_sound: true
+  log_file: "logs/alerts.jsonl"
+  log_rotation: "10 MB"
+  min_confidence: 0.4  # Lower threshold to catch more attacks
+  cooldown_seconds: 5   # Shorter cooldown for testing
+
+# Evaluation Settings
+evaluation:
+  replay_speed: 1.0
+  metrics_interval: 1000
+  results_dir: "results/"
+  plots_enabled: true
+
+# Logging
+logging:
+  level: "INFO"
+  format: "{time:YYYY-MM-DD HH:mm:ss} | {level} | {name} | {message}"
+  file: "logs/nids.log"
+  rotation: "50 MB"

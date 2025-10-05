@@ -1,0 +1,5 @@
+[console_scripts]
+nids = main:main
+nids-demo = scripts.demo:main
+nids-evaluate = scripts.evaluate_offline:main
+nids-export = scripts.export_matlab_metadata:main

@@ -1,0 +1,70 @@
+# NIDS Backend - Production Configuration
+
+# Model Configuration
+models:
+  binary_classifier:
+    path: "data/models/logistic_regression_model.mat"
+    threshold: 0.7  # Higher threshold for production
+    type: "logistic_regression"
+  
+  multiclass_classifier:
+    path: "data/models/decision_tree_model.mat"
+    type: "decision_tree"
+    
+  # Feature metadata (exported from MATLAB)
+  metadata:
+    feature_order: "data/models/feature_order.json"
+    scaler_params: "data/models/scaler_params.json"
+    class_encoder: "data/models/class_encoder.json"
+
+# Network Capture Settings
+capture:
+  interface: null  # null = auto-detect
+  filter: "tcp or udp"  # BPF filter
+  promiscuous: false
+  buffer_size: 4096  # Larger buffer for production
+  timeout: 0.5  # Shorter timeout for better performance
+
+# Feature Extraction
+features:
+  window_size: 15  # Larger window for better accuracy
+  window_overlap: 0.3
+  session_timeout: 600  # Longer session timeout
+  max_payload_bytes: 1500
+  packet_features: true
+  flow_features: true
+  temporal_features: true
+  payload_features: true
+
+# Performance Tuning
+performance:
+  max_packet_latency: 25  # Stricter latency requirements
+  max_multiclass_latency: 100
+  max_concurrent_sessions: 5000  # Higher capacity
+  feature_cache_size: 10000
+  use_numba: true
+  batch_processing: true
+
+# Alert Configuration - Production (Less Sensitive)
+alerts:
+  toast_enabled: false  # Disable desktop notifications in production
+  toast_duration: 5
+  toast_sound: false
+  log_file: "logs/alerts.jsonl"
+  log_rotation: "100 MB"
+  min_confidence: 0.8  # Higher threshold for production
+  cooldown_seconds: 60  # Longer cooldown to prevent spam
+
+# API Configuration
+api:
+  host: "127.0.0.1"  # Localhost only for security
+  port: 8000
+  cors_enabled: false  # Disable CORS in production
+  debug: false
+
+# Logging
+logging:
+  level: "INFO"
+  format: "{time:YYYY-MM-DD HH:mm:ss} | {level} | {name} | {message}"
+  file: "logs/nids_prod.log"
+  rotation: "100 MB"

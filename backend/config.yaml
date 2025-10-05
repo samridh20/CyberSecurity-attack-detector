@@ -1,0 +1,90 @@
+# Real-Time Network Intrusion Detection Configuration
+
+# Model Configuration
+models:
+  binary_classifier:
+    path: "models/logistic_regression_model.mat"
+    threshold: 0.5
+    type: "logistic_regression"
+  
+  multiclass_classifier:
+    path: "models/decision_tree_model.mat"
+    type: "decision_tree"
+    
+  # Feature metadata (exported from MATLAB)
+  metadata:
+    feature_order: "models/feature_order.json"
+    scaler_params: "models/scaler_params.json"
+    class_encoder: "models/class_encoder.json"
+
+# Network Capture Settings
+capture:
+  interface: null  # null = auto-detect, or specify interface name
+  filter: "tcp or udp"  # BPF filter
+  promiscuous: false
+  buffer_size: 2048
+  timeout: 1.0  # seconds
+
+# Feature Extraction
+features:
+  # Sliding window parameters
+  window_size: 10  # packets
+  window_overlap: 0.5
+  
+  # Session timeout (seconds)
+  session_timeout: 300
+  
+  # Payload analysis limits
+  max_payload_bytes: 1500
+  
+  # Feature categories to extract
+  packet_features: true
+  flow_features: true
+  temporal_features: true
+  payload_features: true
+
+# Performance Tuning
+performance:
+  # Latency targets (milliseconds)
+  max_packet_latency: 50
+  max_multiclass_latency: 200
+  
+  # Processing limits
+  max_concurrent_sessions: 1000
+  feature_cache_size: 5000
+  
+  # Optimization flags
+  use_numba: true
+  batch_processing: false
+
+# Alert Configuration
+alerts:
+  # Windows toast notifications
+  toast_enabled: true
+  toast_duration: 5  # seconds
+  toast_sound: true
+  
+  # Logging
+  log_file: "logs/alerts.jsonl"
+  log_rotation: "10 MB"
+  
+  # Alert thresholds
+  min_confidence: 0.7
+  cooldown_seconds: 30  # prevent spam
+
+# Evaluation Settings
+evaluation:
+  # Offline replay settings
+  replay_speed: 1.0  # 1.0 = real-time
+  metrics_interval: 1000  # packets
+  
+  # Output paths
+  results_dir: "results/"
+  plots_enabled: true
+
+# Logging
+logging:
+  level: "INFO"
+  format: "{time:YYYY-MM-DD HH:mm:ss} | {level} | {name} | {message}"
+  file: "logs/nids.log"
+  rotation: "50 MB"
